@@ -1,7 +1,6 @@
-// chat.js — Conversations persisted in IndexedDB (with localStorage fallback)
-// Keeps original UI & functionality intact while moving storage to IndexedDB
-// - Conversations are stored in the "conversations" objectStore
-// - There is a graceful localStorage fallback if IndexedDB is unavailable
+// chat.js — Conversations persisted in localStorage only (no IndexedDB)
+// Keeps original UI & functionality intact while moving storage to localStorage only
+// - Conversations are stored in localStorage under the key "conversations"
 // - This file tries to preserve your original UI, event handlers, and function names
 
 (() => {
@@ -32,103 +31,7 @@
   const deleteMessage = document.getElementById("deleteMessage");
   const bubble = document.getElementById("bubble");
 
-  // ===== IndexedDB setup =====
-  const DB_NAME = "crazy-chat-db";
-  const DB_VERSION = 1;
-  const STORE_CONV = "conversations";
-  let dbInstance = null;
-  let indexedDBAvailable = true;
-
-  function openDB() {
-    return new Promise((resolve, reject) => {
-      if (!("indexedDB" in window)) {
-        indexedDBAvailable = false;
-        return reject(new Error("IndexedDB not available"));
-      }
-      if (dbInstance) return resolve(dbInstance);
-      const req = indexedDB.open(DB_NAME, DB_VERSION);
-      req.onupgradeneeded = (ev) => {
-        const db = ev.target.result;
-        if (!db.objectStoreNames.contains(STORE_CONV)) {
-          db.createObjectStore(STORE_CONV, { keyPath: "id" });
-        }
-      };
-      req.onsuccess = (ev) => {
-        dbInstance = ev.target.result;
-        resolve(dbInstance);
-      };
-      req.onerror = (ev) => {
-        indexedDBAvailable = false;
-        reject(req.error || new Error("Failed to open IndexedDB"));
-      };
-    });
-  }
-
-  async function putConversationToDB(conv) {
-    try {
-      const db = await openDB();
-      return new Promise((resolve, reject) => {
-        const tx = db.transaction(STORE_CONV, "readwrite");
-        const store = tx.objectStore(STORE_CONV);
-        const req = store.put(conv);
-        req.onsuccess = () => resolve(true);
-        req.onerror = (e) => reject(e);
-      });
-    } catch (e) {
-      indexedDBAvailable = false;
-      return false;
-    }
-  }
-
-  async function deleteConversationFromDB(id) {
-    try {
-      const db = await openDB();
-      return new Promise((resolve, reject) => {
-        const tx = db.transaction(STORE_CONV, "readwrite");
-        const store = tx.objectStore(STORE_CONV);
-        const req = store.delete(id);
-        req.onsuccess = () => resolve(true);
-        req.onerror = (e) => reject(e);
-      });
-    } catch (e) {
-      indexedDBAvailable = false;
-      return false;
-    }
-  }
-
-  async function getAllConversationsFromDB() {
-    try {
-      const db = await openDB();
-      return new Promise((resolve, reject) => {
-        const tx = db.transaction(STORE_CONV, "readonly");
-        const store = tx.objectStore(STORE_CONV);
-        const req = store.getAll();
-        req.onsuccess = (ev) => resolve(ev.target.result || []);
-        req.onerror = (e) => reject(e);
-      });
-    } catch (e) {
-      indexedDBAvailable = false;
-      return [];
-    }
-  }
-
-  async function clearConversationsStore() {
-    try {
-      const db = await openDB();
-      return new Promise((resolve, reject) => {
-        const tx = db.transaction(STORE_CONV, "readwrite");
-        const store = tx.objectStore(STORE_CONV);
-        const req = store.clear();
-        req.onsuccess = () => resolve(true);
-        req.onerror = (e) => reject(e);
-      });
-    } catch (e) {
-      indexedDBAvailable = false;
-      return false;
-    }
-  }
-
-  // ===== LocalStorage fallback helpers =====
+  // ===== LocalStorage helpers =====
   function localLoadConversations() {
     try {
       const raw = localStorage.getItem("conversations");
@@ -146,47 +49,17 @@
     }
   }
 
-  // ===== API: load & save conversations (use DB, fallback to localStorage) =====
+  // ===== API: load & save conversations (localStorage) =====
   async function loadConversations() {
-    // attempt DB load
-    try {
-      const dbConvs = await getAllConversationsFromDB();
-      if (dbConvs && dbConvs.length) {
-        conversations = dbConvs.sort((a, b) => b.id - a.id);
-        // ensure currentConversationId is valid
-        if (currentConversationId && !conversations.find(c => c.id === currentConversationId)) {
-          currentConversationId = null;
-        }
-        return;
-      }
-    } catch (e) {
-      // fallthrough to localStorage
-    }
-    // fallback
     conversations = localLoadConversations();
     conversations = conversations.sort((a, b) => b.id - a.id);
+    // ensure currentConversationId is valid
+    if (currentConversationId && !conversations.find(c => c.id === currentConversationId)) {
+      currentConversationId = null;
+    }
   }
 
   async function saveConversations() {
-    // Save into IndexedDB: replace all conversations by clearing the store and putting each conversation
-    if (indexedDBAvailable) {
-      try {
-        await clearConversationsStore();
-        for (const conv of conversations) {
-          await putConversationToDB(conv);
-        }
-        // Also mirror a tiny version to localStorage for quick access / fallback (titles + ids)
-        try {
-          const tiny = conversations.map(c => ({ id: c.id, title: c.title }));
-          localStorage.setItem("conversations_index", JSON.stringify(tiny));
-        } catch (e) { }
-        return true;
-      } catch (err) {
-        // On DB errors, fallback to localStorage and continue
-        indexedDBAvailable = false;
-      }
-    }
-    // fallback to localStorage
     const ok = localSaveConversations(conversations);
     if (!ok) {
       // try pruning oldest conversations to fit into storage
@@ -257,7 +130,6 @@
     return segments;
   }
 
-  // ===== Helper to create bot message actions (extracted to reuse in streaming) =====
   function createBotActions(textRaw) {
     const actions = document.createElement("div");
     actions.className = "response-actions";
@@ -410,11 +282,7 @@
         const textSpan = document.createElement("span");
         textSpan.innerHTML = textHtml;
         contentDiv.appendChild(textSpan);
-        console.log(seg);
-      }
-
-
-      else if (seg.type === "code") {
+      } else if (seg.type === "code") {
         const wrapper = document.createElement("div");
         wrapper.className = "xcode-window";
 
@@ -435,19 +303,13 @@
         const codeEl = wrapper.querySelector("code");
         codeEl.textContent = seg.content; // just raw code
 
-        // // ✅ Use Prism.js or Highlight.js
-        // if (window.Prism) {
-        //   Prism.highlightElement(codeEl);
-        // } else if (window.hljs) {
-        //   hljs.highlightElement(codeEl);
-        // }
-        hljs.highlightElement(codeEl);
-
+        // Use highlight.js if available
+        if (window.hljs) {
+          hljs.highlightElement(codeEl);
+        }
 
         contentDiv.appendChild(wrapper);
       }
-
-
     });
 
     msg.appendChild(contentDiv);
@@ -617,134 +479,128 @@
     return { text: String(response) };
   }
 
+  // ===== sendPrompt (STREAMING VERSION) =====
+  async function sendPrompt(text) {
+    if (!currentConversationId) {
+      const newConv = {
+        id: Date.now(),
+        title: `Chat ${new Date().toLocaleString()}`,
+        messages: []
+      };
+      conversations.unshift(newConv);
+      currentConversationId = newConv.id;
+      await saveConversations();
+      renderConversations();
+    }
 
+    const conv = getCurrentConversation();
 
-
-// ===== sendPrompt (STREAMING VERSION) =====
-async function sendPrompt(text) {
-  if (!currentConversationId) {
-    const newConv = {
-      id: Date.now(),
-      title: `Chat ${new Date().toLocaleString()}`,
-      messages: []
-    };
-    conversations.unshift(newConv);
-    currentConversationId = newConv.id;
+    // Save + render user message
+    conv.messages.push({ text, fromUser: true });
     await saveConversations();
-    renderConversations();
-  }
+    appendUserMessage(text);
 
-  const conv = getCurrentConversation();
+    if (input) input.value = "";
+    if (sendButton) sendButton.style.display = "none";
 
-  // Save + render user message
-  conv.messages.push({ text, fromUser: true });
-  await saveConversations();
-  appendUserMessage(text);
+    // --- Create bot bubble container ---
+    const msg = document.createElement("div");
+    msg.className = "chat-message bot-message";
+    const contentDiv = document.createElement("div");
+    contentDiv.className = "bot-content";
+    msg.appendChild(contentDiv);
+    chatBox.appendChild(msg);
+    chatBox.scrollTop = chatBox.scrollHeight;
 
-  if (input) input.value = "";
-  if (sendButton) sendButton.style.display = "none";
+    // Typing indicator
+    const typing = createTypingIndicator();
+    contentDiv.appendChild(typing);
 
-  // --- Create bot bubble container ---
-  const msg = document.createElement("div");
-  msg.className = "chat-message bot-message";
-  const contentDiv = document.createElement("div");
-  contentDiv.className = "bot-content";
-  msg.appendChild(contentDiv);
-  chatBox.appendChild(msg);
-  chatBox.scrollTop = chatBox.scrollHeight;
+    let fullResponse = "";
+    let codeBuffer = "";
+    let inCodeBlock = false;
+    let currentLang = "";
 
-  // Typing indicator
-  const typing = createTypingIndicator();
-  contentDiv.appendChild(typing);
+    try {
+      const response = await puter.ai.chat(text, {
+        model: (modelSelect ? modelSelect.value : "gpt-5-nano"),
+        stream: true
+      });
 
-  let fullResponse = "";
-  let codeBuffer = "";
-  let inCodeBlock = false;
-  let currentLang = "";
+      for await (const part of response) {
+        if (part?.text) {
+          if (typing.parentNode) typing.remove();
 
-  try {
-    const response = await puter.ai.chat(text, {
-      model: (modelSelect ? modelSelect.value : "gpt-5-nano"),
-      stream: true
-    });
+          fullResponse += part.text;
 
-    for await (const part of response) {
-      if (part?.text) {
-        if (typing.parentNode) typing.remove();
+          // --- Process streaming chunks ---
+          const lines = part.text.split("\n");
+          for (let line of lines) {
+            if (line.trim().startsWith("```")) {
+              if (!inCodeBlock) {
+                // Entering code block
+                inCodeBlock = true;
+                currentLang = line.trim().replace("```", "").trim() || "plaintext";
+                codeBuffer = "";
+              } else {
+                // Closing code block -> render
+                const pre = document.createElement("pre");
+                pre.className = "xcode-window";
+                const codeEl = document.createElement("code");
+                codeEl.className = `language-${currentLang}`;
+                codeEl.textContent = codeBuffer.trim();
+                pre.appendChild(codeEl);
+                contentDiv.appendChild(pre);
+                if (window.hljs) {
+                  hljs.highlightElement(codeEl);
+                }
 
-        fullResponse += part.text;
-
-        // --- Process streaming chunks ---
-        const lines = part.text.split("\n");
-        for (let line of lines) {
-          if (line.trim().startsWith("```")) {
-            if (!inCodeBlock) {
-              // Entering code block
-              inCodeBlock = true;
-              currentLang = line.trim().replace("```", "").trim() || "plaintext";
-              codeBuffer = "";
+                inCodeBlock = false;
+                currentLang = "";
+                codeBuffer = "";
+              }
+            } else if (inCodeBlock) {
+              codeBuffer += line + "\n";
             } else {
-              // Closing code block -> render
-              const pre = document.createElement("pre");
-              pre.className = "xcode-window";
-              const codeEl = document.createElement("code");
-              codeEl.className = `language-${currentLang}`;
-              codeEl.textContent = codeBuffer.trim();
-              pre.appendChild(codeEl);
-              contentDiv.appendChild(pre);
-              hljs.highlightElement(codeEl);
-
-              inCodeBlock = false;
-              currentLang = "";
-              codeBuffer = "";
+              // Normal text
+              contentDiv.innerHTML = renderBold(fullResponse.replace(/```[\s\S]*```/g, ""))
+                .replace(/\n/g, "<br>");
             }
-          } else if (inCodeBlock) {
-            codeBuffer += line + "\n";
-          } else {
-            // Normal text
-            contentDiv.innerHTML = renderBold(fullResponse.replace(/```[\s\S]*```/g, ""))
-              .replace(/\n/g, "<br>");
           }
-        }
 
-        chatBox.scrollTop = chatBox.scrollHeight;
+          chatBox.scrollTop = chatBox.scrollHeight;
+        }
+      }
+
+      // Save final bot response
+      conv.messages.push({ text: fullResponse, fromUser: false });
+      await saveConversations();
+
+      // Append actions to the streaming message so they appear immediately (fixes the bug)
+      const actions = createBotActions(fullResponse);
+      msg.appendChild(actions);
+
+    } catch (err) {
+      console.error("Streaming error:", err);
+      const errorText = "❌ Failed to fetch response.";
+      contentDiv.textContent = errorText;
+      conv.messages.push({ text: errorText, fromUser: false });
+      await saveConversations();
+      showBubble(errorText);
+
+      // Still append actions so the user can at least copy/error-interact
+      const actions = createBotActions(errorText);
+      msg.appendChild(actions);
+
+    } finally {
+      if (typing.parentNode) typing.remove();
+      chatBox.scrollTop = chatBox.scrollHeight;
+      if (sendButton) {
+        sendButton.disabled = false;
+        sendButton.style.display = (input && input.value.trim()) ? "flex" : "none";
       }
     }
-
-    // Save final bot response
-    conv.messages.push({ text: fullResponse, fromUser: false });
-    await saveConversations();
-
-    // Append actions to the streaming message so they appear immediately (fixes the bug)
-    const actions = createBotActions(fullResponse);
-    msg.appendChild(actions);
-
-  } catch (err) {
-    console.error("Streaming error:", err);
-    const errorText = "❌ Failed to fetch response.";
-    contentDiv.textContent = errorText;
-    conv.messages.push({ text: errorText, fromUser: false });
-    await saveConversations();
-    showBubble(errorText);
-
-    // Still append actions so the user can at least copy/error-interact
-    const actions = createBotActions(errorText);
-    msg.appendChild(actions);
-
-  } finally {
-    if (typing.parentNode) typing.remove();
-    chatBox.scrollTop = chatBox.scrollHeight;
-    if (sendButton) {
-      sendButton.disabled = false;
-      sendButton.style.display = (input && input.value.trim()) ? "flex" : "none";
-    }
   }
-}
-
-
-
-
-
 
   // ===== Event handlers =====
   if (newChat) newChat.addEventListener("click", async () => {
@@ -840,14 +696,8 @@ async function sendPrompt(text) {
     chatBox.scrollTop = chatBox.scrollHeight;
   }
 
-  // ===== Initialization: load conversations from DB (or fallback) and render =====
+  // ===== Initialization: load conversations from localStorage and render =====
   async function init() {
-    try {
-      await openDB();
-    } catch (e) {
-      console.warn("IndexedDB not available, falling back to localStorage.");
-      indexedDBAvailable = false;
-    }
     await loadConversations();
     renderConversations();
     renderConversationMessages();
