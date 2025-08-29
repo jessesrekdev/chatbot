@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Speech-to-Text Debug</title>
+</head>
+<body>
+<button id="startBtn">Start</button>
+<button id="stopBtn">Stop</button>
+<p id="output">🎤 Waiting...</p>
+
+<script>
+const output = document.getElementById("output");
+let recognition;
+let listening = false;
+
+window.addEventListener("DOMContentLoaded", () => {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    console.log("❌ Browser does not support Speech Recognition");
+    output.innerText = "Browser not supported";
+    return;
+  }
+
+  recognition = new SpeechRecognition();
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.lang = "en-US";
+
+  recognition.onstart = () => console.log("✅ Recognition started");
+  recognition.onend = () => {
+    console.log("ℹ️ Recognition ended");
+    if (listening) recognition.start(); // auto-restart
+  };
+  recognition.onerror = (e) => console.log("❌ Recognition error:", e.error);
+
+  recognition.onresult = (event) => {
+    console.log("🔹 onresult event:", event);
+    let finalText = "";
+    let interimText = "";
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const transcript = event.results[i][0].transcript;
+      console.log("➡ Transcript:", transcript, "isFinal:", event.results[i].isFinal);
+      if (event.results[i].isFinal) finalText += transcript + " ";
+      else interimText += transcript;
+    }
+    output.innerHTML = finalText + "<i style='color:gray'>" + interimText + "</i>";
+  };
+
+  document.getElementById("startBtn").onclick = () => {
+    if (!listening) {
+      listening = true;
+      recognition.start();
+      console.log("🎤 Listening started");
+      output.innerText = "🎤 Listening...";
+    }
+  };
+
+  document.getElementById("stopBtn").onclick = () => {
+    listening = false;
+    recognition.stop();
+    console.log("🛑 Listening stopped");
+    output.innerText += "\n🛑 Stopped";
+  };
+});
+</script>
+</body>
+</html>
