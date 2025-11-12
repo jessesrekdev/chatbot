@@ -32,6 +32,7 @@
   const deleteDialog = document.getElementById("deleteDialog");
   const deleteMessage = document.getElementById("deleteMessage");
   const bubble = document.getElementById("bubble");
+  const voiceButton = document.getElementById("voiceButton");
 
   // ===== LocalStorage helpers =====
   function localLoadConversations() {
@@ -1309,6 +1310,112 @@ function copyCode(codeId) {
     await loadConversations();
     renderConversations();
     renderConversationMessages();
+  }
+
+  // ===== Speech-to-Text Functionality =====
+  let recognition = null;
+  let isListening = false;
+  let finalTranscript = '';
+
+  // Initialize speech recognition
+  if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+
+    recognition.onstart = () => {
+      isListening = true;
+      finalTranscript = input ? input.value : '';
+      if (voiceButton) {
+        voiceButton.style.color = '#3b82f6';
+        voiceButton.style.background = 'rgba(59, 130, 246, 0.1)';
+      }
+      showBubble('🎤 Listening...');
+    };
+
+    recognition.onresult = (event) => {
+      let interimTranscript = '';
+      
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalTranscript += transcript + ' ';
+        } else {
+          interimTranscript += transcript;
+        }
+      }
+
+      // Update textarea with transcription
+      if (input) {
+        input.value = (finalTranscript + interimTranscript).trim();
+        input.dispatchEvent(new Event('input'));
+      }
+    };
+
+    recognition.onerror = (event) => {
+      console.error('Speech recognition error:', event.error);
+      if (event.error === 'not-allowed') {
+        showBubble('❌ Microphone access denied');
+      } else if (event.error === 'no-speech') {
+        showBubble('🔇 No speech detected');
+      } else {
+        showBubble('❌ Speech recognition error');
+      }
+      stopListening();
+    };
+
+    recognition.onend = () => {
+      if (isListening) {
+        // Restart if still supposed to be listening
+        try {
+          recognition.start();
+        } catch (e) {
+          stopListening();
+        }
+      }
+    };
+  }
+
+  function startListening() {
+    if (!recognition) {
+      showBubble('❌ Speech recognition not supported on this device');
+      return;
+    }
+
+    try {
+      recognition.start();
+    } catch (e) {
+      console.error('Failed to start recognition:', e);
+    }
+  }
+
+  function stopListening() {
+    isListening = false;
+    if (recognition) {
+      try {
+        recognition.stop();
+      } catch (e) {
+        console.error('Failed to stop recognition:', e);
+      }
+    }
+    if (voiceButton) {
+      voiceButton.style.color = '';
+      voiceButton.style.background = '';
+    }
+  }
+
+  // Voice button click handler
+  if (voiceButton) {
+    voiceButton.addEventListener('click', () => {
+      if (isListening) {
+        stopListening();
+        showBubble('🛑 Stopped listening');
+      } else {
+        startListening();
+      }
+    });
   }
 
   // Kick off initialization
