@@ -86,8 +86,27 @@
   }
 
   function setActiveConversation(convId) {
+    // If switching away from an active generation tab, stop generation
+    if (isGenerating && activeGenerationTab && activeGenerationTab !== convId) {
+      shouldStop = true;
+      isGenerating = false;
+      activeGenerationTab = null;
+      
+      // Reset stop button immediately
+      if (sendButton) {
+        sendButton.classList.remove('stop-button');
+        sendButton.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>`;
+        sendButton.style.display = (input && input.value.trim()) ? "flex" : "none";
+      }
+    }
+    
     currentConversationId = convId;
     renderConversationMessages();
+    
+    // Update stop button visibility when switching tabs
+    updateStopButtonVisibility();
   }
 
   function showBubble(text) {
@@ -237,7 +256,7 @@ Title:`;
 
     const copyBtn = document.createElement("button");
     copyBtn.className = "action-copy";
-    copyBtn.innerHTML = `<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 20 20"><rect x="4" y="4" width="12" height="12" rx="2" stroke="currentColor" fill="none"/><rect x="8" y="8" width="8" height="8" rx="2" stroke="currentColor" fill="none"/></svg> <span>Copy</span>`;
+    copyBtn.innerHTML = `<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 20 20"><rect x="4" y="4" width="12" height="12" rx="2"/><rect x="8" y="8" width="8" height="8" rx="2" stroke="currentColor" fill="none"/></svg> <span>Copy</span>`;
     const successBtn = document.createElement("button");
     successBtn.className = "code-copied-btn";
     successBtn.style.display = "none";
@@ -274,13 +293,8 @@ Title:`;
       // Show stop button
       isGenerating = true;
       shouldStop = false;
-      if (sendButton) {
-        sendButton.style.display = "flex";
-        sendButton.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-          <rect x="6" y="6" width="12" height="12" rx="2"/>
-        </svg>`;
-        sendButton.classList.add('stop-button');
-      }
+      activeGenerationTab = currentConversationId;
+      updateStopButtonVisibility();
 
       try {
         // Remove this message and all messages after it
@@ -318,6 +332,12 @@ Title:`;
         for await (const part of response) {
           if (shouldStop) {
             console.log('🛑 Regeneration stopped by user');
+            // Save partial response before breaking
+            if (fullResponse) {
+              savedPartialResponse = fullResponse;
+              conv.messages.push({ text: fullResponse, fromUser: false });
+              await saveConversations();
+            }
             break;
           }
           
@@ -356,13 +376,8 @@ Title:`;
         // Reset stop button
         isGenerating = false;
         shouldStop = false;
-        if (sendButton) {
-          sendButton.classList.remove('stop-button');
-          sendButton.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-            <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>`;
-          sendButton.style.display = (input && input.value.trim()) ? "flex" : "none";
-        }
+        activeGenerationTab = null;
+        updateStopButtonVisibility();
       }
     };
 
@@ -583,6 +598,20 @@ Title:`;
 // Make createCodeBlockHTML globally available
 window.createCodeBlockHTML = function(codeId, language, code) {
     console.log('🔧 Creating code block:', { codeId, language, codeLength: code.length });
+    
+    // Determine if this is HTML code that can be previewed
+    const isHTML = language === 'html' || language === 'HTML';
+    const fileName = language ? `${language.toLowerCase()}.${getFileExtension(language)}` : 'code.txt';
+    
+    // Create preview button for HTML
+    const previewButton = isHTML ? `
+      <button class="xcode-preview-btn" onclick="previewHTML('${codeId}')" style="background: #3a3a3a; border: 1px solid #4a4a4a; color: #d4d4d4; padding: 6px; border-radius: 6px; font-size: 12px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; min-width: 32px; height: 32px;" title="Preview HTML">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+          <circle cx="12" cy="12" r="3"></circle>
+        </svg>
+      </button>` : '';
+    
     return `
       <div class="xcode-window" style="margin: 16px 0; border-radius: 10px; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', monospace; background: #1e1e1e; border: 1px solid #3a3a3a; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);">
         <div class="xcode-header" style="background: #2d2d2d; padding: 10px 16px; border-bottom: 1px solid #3a3a3a; display: flex; justify-content: space-between; align-items: center;">
@@ -592,15 +621,27 @@ window.createCodeBlockHTML = function(codeId, language, code) {
               <div class="xcode-dot yellow" style="width: 12px; height: 12px; border-radius: 50%; background: #ffbd2e; border: 0.5px solid rgba(0,0,0,0.2);"></div>
               <div class="xcode-dot green" style="width: 12px; height: 12px; border-radius: 50%; background: #28ca42; border: 0.5px solid rgba(0,0,0,0.2);"></div>
             </div>
-            <span class="xcode-lang" style="color: #a0a0a0; font-size: 12px; font-weight: 500; text-transform: lowercase; letter-spacing: 0.5px;">${language}</span>
+            <span class="xcode-lang" style="color: #a0a0a0; font-size: 12px; font-weight: 500; text-transform: lowercase; letter-spacing: 0.5px;">${language || 'text'}</span>
           </div>
-          <div class="xcode-actions" style="display: flex; gap: 8px;">
-            <button class="xcode-copy-btn" onclick="copyCode('${codeId}')" style="background: #3a3a3a; border: 1px solid #4a4a4a; color: #d4d4d4; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; transition: all 0.2s; font-weight: 500;">
-              Copy
+          <div class="xcode-actions" style="display: flex; gap: 8px; align-items: center;">
+            ${previewButton}
+            <button class="xcode-download-btn" onclick="downloadCode('${codeId}', '${fileName}')" style="background: #3a3a3a; border: 1px solid #4a4a4a; color: #d4d4d4; padding: 6px; border-radius: 6px; font-size: 12px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; min-width: 32px; height: 32px;" title="Download as ${fileName}">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+            </button>
+            <button class="xcode-copy-btn" onclick="copyCode('${codeId}')" style="background: #3a3a3a; border: 1px solid #4a4a4a; color: #d4d4d4; padding: 6px; border-radius: 6px; font-size: 12px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; min-width: 32px; height: 32px;" title="Copy to clipboard">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2"/>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
             </button>
           </div>
         </div>
-        <pre class="xcode-content" style="margin: 0; padding: 16px; overflow-x: auto; background: #1e1e1e; color: #d4d4d4; font-size: 13px; line-height: 1.5; font-family: 'SF Mono', 'Monaco', 'Menlo', monospace;"><code id="${codeId}">${escapeHtml(code)}</code></pre>
+        <pre class="xcode-content" style="margin: 0; padding: 16px; overflow-x: auto; background: #1e1e1e; color: #d4d4d4; font-size: 13px; line-height: 1.5; font-family: 'SF Mono', 'Monaco', 'Menlo', monospace;"><code id="${codeId}">${highlightCode(language, code)}</code></pre>
+        <div id="preview-${codeId}" class="html-preview" style="display: none; padding: 16px; background: white; border-top: 1px solid #3a3a3a; max-height: 400px; overflow: auto;"></div>
       </div>
     `;
 }
@@ -654,6 +695,90 @@ function copyCode(codeId) {
     return text.replace(/[&<>"']/g, m => map[m]);
   }
 
+  // Lightweight syntax highlighting without external libs
+  function highlightCode(language, code) {
+    try {
+      const lang = (language || '').toLowerCase();
+      let escaped = escapeHtml(code);
+
+      if (lang === 'html' || lang === 'xml') {
+        escaped = escaped
+          .replace(/(&lt;\/?)([a-zA-Z0-9-:]+)/g, '$1<span style="color:#569cd6">$2<\/span>')
+          .replace(/([a-zA-Z-:]+)(=)/g, '<span style="color:#9cdcfe">$1<\/span>$2')
+          .replace(/(&quot;.*?&quot;|&#039;.*?&#039;)/g, '<span style="color:#ce9178">$1<\/span>');
+        return escaped;
+      }
+
+      if ([ 'javascript','js','typescript','ts' ].includes(lang)) {
+        escaped = escaped
+          .replace(/(\/\*[\s\S]*?\*\/)/g, '<span style="color:#6a9955">$1<\/span>')
+          .replace(/(\/\/.*?$)/gm, '<span style="color:#6a9955">$1<\/span>')
+          .replace(/('(?:\\.|[^'])*'|"(?:\\.|[^"])*"|`(?:\\.|[^`])*`)/g, '<span style="color:#ce9178">$1<\/span>')
+          .replace(/\b(abstract|as|async|await|boolean|break|case|catch|class|const|constructor|continue|debugger|declare|default|delete|do|else|enum|export|extends|false|finally|for|from|function|get|if|implements|import|in|instanceof|interface|let|new|null|number|of|package|private|protected|public|readonly|return|set|static|string|super|switch|this|throw|true|try|typeof|undefined|var|void|while|with|yield)\b/g, '<span style="color:#c586c0">$1<\/span>')
+          .replace(/\b(\d+(?:\.\d+)?)\b/g, '<span style="color:#b5cea8">$1<\/span>');
+        return escaped;
+      }
+
+      if ([ 'python','py' ].includes(lang)) {
+        escaped = escaped
+          .replace(/(#.*?$)/gm, '<span style="color:#6a9955">$1<\/span>')
+          .replace(/('''[\s\S]*?'''|"""[\s\S]*?"""|'(?:\\.|[^'])*'|"(?:\\.|[^"])*")/g, '<span style="color:#ce9178">$1<\/span>')
+          .replace(/\b(and|as|assert|async|await|break|class|continue|def|del|elif|else|except|False|finally|for|from|global|if|import|in|is|lambda|None|nonlocal|not|or|pass|raise|return|True|try|while|with|yield)\b/g, '<span style="color:#c586c0">$1<\/span>')
+          .replace(/\b(\d+(?:\.\d+)?)\b/g, '<span style="color:#b5cea8">$1<\/span>');
+        return escaped;
+      }
+
+      if (lang === 'css') {
+        escaped = escaped
+          .replace(/(\/\*[\s\S]*?\*\/)/g, '<span style="color:#6a9955">$1<\/span>')
+          .replace(/([.#][a-zA-Z0-9_-]+)/g, '<span style="color:#4fc1ff">$1<\/span>')
+          .replace(/([a-z-]+)(\s*:\s*)/g, '<span style="color:#9cdcfe">$1<\/span>$2')
+          .replace(/(:\s*)([^;]+)(;)/g, '$1<span style="color:#ce9178">$2<\/span>$3');
+        return escaped;
+      }
+
+      // Default: escaped only
+      return escaped;
+    } catch (e) {
+      return escapeHtml(code);
+    }
+  }
+
+  // Get appropriate file extension based on language
+  window.getFileExtension = function(language) {
+    if (!language) return 'txt';
+    
+    const lang = language.toLowerCase();
+    const extensions = {
+      'javascript': 'js',
+      'typescript': 'ts',
+      'python': 'py',
+      'html': 'html',
+      'css': 'css',
+      'java': 'java',
+      'c': 'c',
+      'cpp': 'cpp',
+      'csharp': 'cs',
+      'go': 'go',
+      'ruby': 'rb',
+      'php': 'php',
+      'swift': 'swift',
+      'kotlin': 'kt',
+      'rust': 'rs',
+      'shell': 'sh',
+      'bash': 'sh',
+      'powershell': 'ps1',
+      'sql': 'sql',
+      'json': 'json',
+      'xml': 'xml',
+      'yaml': 'yml',
+      'markdown': 'md'
+    };
+    
+    return extensions[lang] || 'txt';
+  };
+  
+  // Copy code to clipboard with improved feedback
   window.copyCode = function(codeId) {
     const codeElement = document.getElementById(codeId);
     if (codeElement) {
@@ -661,15 +786,191 @@ function copyCode(codeId) {
       navigator.clipboard.writeText(text).then(() => {
         // Show success feedback
         const btn = codeElement.closest('.xcode-window').querySelector('.xcode-copy-btn');
-        const originalText = btn.textContent;
-        btn.textContent = 'Copied!';
+        const originalSvg = btn.innerHTML;
+        
+        // Change to checkmark icon
+        btn.innerHTML = `
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+        `;
         btn.style.background = '#28a745';
         
         setTimeout(() => {
-          btn.textContent = originalText;
+          btn.innerHTML = originalSvg;
           btn.style.background = '#3a3a3a';
         }, 2000);
       });
+    }
+  };
+  
+  // Download code as a file
+  window.downloadCode = function(codeId, fileName) {
+    const codeElement = document.getElementById(codeId);
+    if (codeElement) {
+      const text = codeElement.textContent;
+      const blob = new Blob([text], {type: 'text/plain'});
+      const url = URL.createObjectURL(blob);
+      
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      // Show feedback
+      const btn = codeElement.closest('.xcode-window').querySelector('.xcode-download-btn');
+      const originalBackground = btn.style.background;
+      btn.style.background = '#28a745';
+      
+      setTimeout(() => {
+        btn.style.background = originalBackground;
+      }, 2000);
+    }
+  };
+  
+  // Preview HTML in a container below the code with DeepSeek-like animations
+  window.previewHTML = function(codeId) {
+    const codeElement = document.getElementById(codeId);
+    const previewContainer = document.getElementById(`preview-${codeId}`);
+    
+    if (codeElement && previewContainer) {
+      const htmlContent = codeElement.textContent;
+      const isMobile = window.innerWidth < 768;
+      const overlayEl = document.getElementById('desktop-preview-overlay');
+      const isCurrentlyShown = isMobile ? (previewContainer.style.display !== 'none') : !!overlayEl;
+      
+      if (isCurrentlyShown) {
+        // Hide preview with animation
+        if (window.innerWidth < 768) {
+          // Mobile slide-down animation
+          previewContainer.style.transform = 'translateY(100%)';
+          setTimeout(() => {
+            previewContainer.style.display = 'none';
+            previewContainer.style.transform = 'translateY(0)';
+          }, 300);
+        } else {
+          // Desktop close overlay modal
+          const overlayEl2 = document.getElementById('desktop-preview-overlay');
+          if (overlayEl2) {
+            overlayEl2.style.opacity = '0';
+            const contentEl = overlayEl2.querySelector('.desktop-preview-content');
+            if (contentEl) contentEl.style.transform = 'scale(0.98)';
+            setTimeout(() => {
+              if (overlayEl2 && overlayEl2.parentNode) overlayEl2.parentNode.removeChild(overlayEl2);
+            }, 200);
+          }
+        }
+        
+        const btn = codeElement.closest('.xcode-window').querySelector('.xcode-preview-btn');
+        btn.style.background = '#3a3a3a';
+      } else {
+        // Show preview
+        previewContainer.innerHTML = htmlContent;
+        previewContainer.style.display = 'block';
+        
+        // Highlight the preview button
+        const btn = codeElement.closest('.xcode-window').querySelector('.xcode-preview-btn');
+        btn.style.background = '#2c7be5';
+        
+        // Check if we're on mobile and adjust display
+        const isMobile = window.innerWidth < 768;
+        if (isMobile) {
+          // Mobile settings with slide-up animation
+          previewContainer.style.position = 'fixed';
+          previewContainer.style.bottom = '0';
+          previewContainer.style.left = '0';
+          previewContainer.style.right = '0';
+          previewContainer.style.maxHeight = '85vh';
+          previewContainer.style.zIndex = '1000';
+          previewContainer.style.boxShadow = '0 -2px 20px rgba(0,0,0,0.3)';
+          previewContainer.style.borderRadius = '12px 12px 0 0';
+          previewContainer.style.overflow = 'hidden';
+          previewContainer.style.transform = 'translateY(100%)';
+          previewContainer.style.transition = 'transform 0.3s ease-in-out';
+          
+          // Add handle bar for mobile
+          const handleBar = document.createElement('div');
+          handleBar.style.width = '40px';
+          handleBar.style.height = '4px';
+          handleBar.style.background = '#ccc';
+          handleBar.style.borderRadius = '2px';
+          handleBar.style.margin = '8px auto';
+          previewContainer.insertBefore(handleBar, previewContainer.firstChild);
+          
+          // Add close button for mobile
+          const closeBtn = document.createElement('div');
+          closeBtn.style.position = 'absolute';
+          closeBtn.style.top = '12px';
+          closeBtn.style.right = '12px';
+          closeBtn.style.zIndex = '1001';
+          closeBtn.innerHTML = `
+            <div style="cursor: pointer; background: #f44336; color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: bold;">
+              ×
+            </div>
+          `;
+          closeBtn.onclick = () => previewHTML(codeId);
+          previewContainer.appendChild(closeBtn);
+          
+          // Trigger slide-up animation
+          setTimeout(() => {
+            previewContainer.style.transform = 'translateY(0)';
+          }, 10);
+        } else {
+          // Desktop: create overlay modal centered
+          const overlay = document.createElement('div');
+          overlay.id = 'desktop-preview-overlay';
+          overlay.style.position = 'fixed';
+          overlay.style.inset = '0';
+          overlay.style.background = 'rgba(0,0,0,0.45)';
+          overlay.style.display = 'flex';
+          overlay.style.alignItems = 'center';
+          overlay.style.justifyContent = 'center';
+          overlay.style.opacity = '0';
+          overlay.style.transition = 'opacity 0.2s ease-in-out';
+          
+          // Content container
+          const content = document.createElement('div');
+          content.className = 'desktop-preview-content';
+          content.style.width = '80vw';
+          content.style.height = '80vh';
+          content.style.background = '#fff';
+          content.style.borderRadius = '12px';
+          content.style.boxShadow = '0 10px 40px rgba(0,0,0,0.3)';
+          content.style.overflow = 'hidden';
+          content.style.transform = 'scale(0.98)';
+          content.style.transition = 'transform 0.2s ease-in-out';
+          content.style.position = 'relative';
+          
+          // Close button
+          const close = document.createElement('div');
+          close.style.position = 'absolute';
+          close.style.top = '12px';
+          close.style.right = '12px';
+          close.style.zIndex = '10';
+          close.innerHTML = `<div style="cursor:pointer;background:#f44336;color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:bold;">×</div>`;
+          close.onclick = () => previewHTML(codeId);
+          content.appendChild(close);
+          
+          // Iframe to render HTML safely
+          const iframe = document.createElement('iframe');
+          iframe.style.border = 'none';
+          iframe.style.width = '100%';
+          iframe.style.height = '100%';
+          iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin');
+          iframe.srcdoc = htmlContent;
+          content.appendChild(iframe);
+          
+          // Append and animate
+          overlay.appendChild(content);
+          document.body.appendChild(overlay);
+          // backdrop click closes
+          overlay.addEventListener('click', (e) => { if (e.target === overlay) previewHTML(codeId); });
+          requestAnimationFrame(() => { overlay.style.opacity = '1'; content.style.transform = 'scale(1)'; });
+        }
+      }
     }
   };
 
@@ -701,24 +1002,19 @@ function copyCode(codeId) {
 
     const copyBtn = document.createElement("button");
     copyBtn.className = "action-copy";
-    copyBtn.innerHTML = `<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 20 20">
-      <rect x="4" y="4" width="12" height="12" rx="2" stroke="currentColor" fill="none"/>
-      <rect x="8" y="8" width="8" height="8" rx="2" stroke="currentColor" fill="none"/>
-    </svg> <span>Copy</span>`;
+    copyBtn.innerHTML = `<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 20 20"><rect x="4" y="4" width="12" height="12" rx="2"/><rect x="8" y="8" width="8" height="8" rx="2" stroke="currentColor" fill="none"/></svg> <span>Copy</span>`;
 
     const successBtn = document.createElement("button");
     successBtn.className = "code-copied-btn";
     successBtn.style.display = "none";
-    successBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-      <path d="M5 10.5l3 3 7-7" stroke="#10a37f" stroke-width="2" fill="none"/>
-    </svg> <span>Copied</span>`;
+    successBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M5 10.5l3 3 7-7" stroke="#10a37f" stroke-width="2" fill="none"/></svg> <span>Copied</span>`;
 
     // Edit button with working functionality
     const editBtn = document.createElement("button");
     editBtn.className = "action-edit";
     editBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/>
     </svg> <span>Edit</span>`;
     
     editBtn.onclick = async () => {
@@ -799,13 +1095,8 @@ function copyCode(codeId) {
         // Show stop button
         isGenerating = true;
         shouldStop = false;
-        if (sendButton) {
-          sendButton.style.display = "flex";
-          sendButton.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-            <rect x="6" y="6" width="12" height="12" rx="2"/>
-          </svg>`;
-          sendButton.classList.add('stop-button');
-        }
+        activeGenerationTab = currentConversationId;
+        updateStopButtonVisibility();
         
         try {
           // Update the message
@@ -847,6 +1138,12 @@ function copyCode(codeId) {
           for await (const part of response) {
             if (shouldStop) {
               console.log('🛑 Edit regeneration stopped by user');
+              // Save partial response before breaking
+              if (fullResponse) {
+                savedPartialResponse = fullResponse;
+                conv.messages.push({ text: fullResponse, fromUser: false });
+                await saveConversations();
+              }
               break;
             }
             
@@ -882,13 +1179,9 @@ function copyCode(codeId) {
           // Reset stop button
           isGenerating = false;
           shouldStop = false;
-          if (sendButton) {
-            sendButton.classList.remove('stop-button');
-            sendButton.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>`;
-            sendButton.style.display = (input && input.value.trim()) ? "flex" : "none";
-          }
+          activeGenerationTab = null;
+          savedPartialResponse = "";
+          updateStopButtonVisibility();
         }
       };
       
@@ -1028,15 +1321,13 @@ function copyCode(codeId) {
   // ===== State for stopping generation =====
   let isGenerating = false;
   let shouldStop = false;
+  let activeGenerationTab = null; // Track which tab is generating
+  let savedPartialResponse = ""; // To save partial responses when switching tabs
 
   // ===== sendPrompt (STREAMING VERSION with MARKDOWN) =====
   async function sendPrompt(text) {
     if (!currentConversationId) {
-      const newConv = {
-        id: Date.now(),
-        title: 'New Chat',
-        messages: []
-      };
+      const newConv = { id: Date.now(), title: 'New Chat', messages: [] };
       conversations.unshift(newConv);
       currentConversationId = newConv.id;
       await saveConversations();
@@ -1044,6 +1335,7 @@ function copyCode(codeId) {
     }
 
     const conv = getCurrentConversation();
+    activeGenerationTab = currentConversationId; // Set active tab
 
     // Save + render user message
     conv.messages.push({ text, fromUser: true });
@@ -1053,7 +1345,7 @@ function copyCode(codeId) {
 
     if (input) input.value = "";
     
-    // Show stop button
+    // Show stop button only in this tab
     isGenerating = true;
     shouldStop = false;
     if (sendButton) {
@@ -1076,7 +1368,7 @@ function copyCode(codeId) {
     // Typing indicator
     const typing = createTypingIndicator();
     contentDiv.appendChild(typing);
-
+    
     let fullResponse = "";
     let hasStartedTyping = false;
 
@@ -1089,76 +1381,54 @@ function copyCode(codeId) {
       for await (const part of response) {
         if (shouldStop) {
           console.log('🛑 Generation stopped by user');
+          // Save partial response before breaking
+          if (fullResponse) {
+            savedPartialResponse = fullResponse;
+            conv.messages.push({ text: fullResponse, fromUser: false });
+            await saveConversations();
+            const botMessageIndex = conv.messages.length - 1;
+            
+            // Add action buttons even when stopped
+            const actions = createBotActions(fullResponse, botMessageIndex);
+            msg.appendChild(actions);
+          }
           break;
         }
         
         if (part?.text) {
-          // Remove typing indicator on first chunk
           if (!hasStartedTyping) {
             if (typing.parentNode) typing.remove();
             hasStartedTyping = true;
           }
-
           fullResponse += part.text;
-
-          // Use code block processing for live updates
           contentDiv.innerHTML = processCodeBlocks(fullResponse);
-
           chatBox.scrollTop = chatBox.scrollHeight;
         }
       }
 
-      // Save final bot response
-      conv.messages.push({ text: fullResponse, fromUser: false });
-      await saveConversations();
-      const botMessageIndex = conv.messages.length - 1;
-
-      // Final render with code block processing
-      contentDiv.innerHTML = processCodeBlocks(fullResponse);
-      
-      // Auto-generate title after second user message (runs in background)
-      console.log('💬 Message count:', conv.messages.length);
-      if (conv.messages.length === 4) {
-        console.log('🚀 Triggering title generation...');
-        // Run in background without blocking
-        setTimeout(() => generateChatTitle(conv), 500);
+      // Only save complete response if not stopped
+      if (!shouldStop && fullResponse) {
+        conv.messages.push({ text: fullResponse, fromUser: false });
+        await saveConversations();
+        const botMessageIndex = conv.messages.length - 1;
+        
+        // Add action buttons
+        const actions = createBotActions(fullResponse, botMessageIndex);
+        msg.appendChild(actions);
+        
+        // Generate chat title in background
+        setTimeout(() => generateChatTitle(conv), 1000);
       }
-
-      // Append actions to the message with correct index
-      const actions = createBotActions(fullResponse, botMessageIndex);
-      msg.appendChild(actions);
-
-    } catch (err) {
-      console.error("Streaming error:", err);
-      const errorText = "❌ Failed to fetch response.";
-      contentDiv.textContent = errorText;
-      conv.messages.push({ text: errorText, fromUser: false });
-      await saveConversations();
-      const errorMessageIndex = conv.messages.length - 1;
-      showBubble(errorText);
-
-      // Still append actions with correct index
-      const actions = createBotActions(errorText, errorMessageIndex);
-      msg.appendChild(actions);
 
     } finally {
-      if (typing.parentNode) typing.remove();
-      chatBox.scrollTop = chatBox.scrollHeight;
-      
-      // Update composer position (move to bottom)
-      updateComposerPosition();
-      
-      // Reset button to send icon
+      // Always reset generation state
       isGenerating = false;
       shouldStop = false;
-      if (sendButton) {
-        sendButton.disabled = false;
-        sendButton.classList.remove('stop-button');
-        sendButton.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-          <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>`;
-        sendButton.style.display = (input && input.value.trim()) ? "flex" : "none";
-      }
+      savedPartialResponse = "";
+      activeGenerationTab = null;
+      
+      // Update button state
+      updateStopButtonVisibility();
     }
   }
 
@@ -1172,9 +1442,30 @@ function copyCode(codeId) {
     renderConversationMessages();
   });
 
+  // Helper function to update stop button visibility based on current state
+  function updateStopButtonVisibility() {
+    if (!sendButton) return;
+    
+    if (isGenerating && activeGenerationTab === currentConversationId) {
+      // Show stop button in the generating tab
+      sendButton.style.display = "flex";
+      sendButton.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+        <rect x="6" y="6" width="12" height="12" rx="2"/>
+      </svg>`;
+      sendButton.classList.add('stop-button');
+    } else {
+      // Show send button or hide based on input
+      sendButton.classList.remove('stop-button');
+      sendButton.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+        <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>`;
+      sendButton.style.display = (input && input.value.trim()) ? "flex" : "none";
+    }
+  }
+
   if (sendButton) sendButton.addEventListener("click", () => {
     // If generating, stop it
-    if (isGenerating) {
+    if (isGenerating && activeGenerationTab === currentConversationId) {
       shouldStop = true;
       showBubble("⏹️ Stopping generation...");
       return;
@@ -1258,7 +1549,7 @@ function copyCode(codeId) {
   });
 
   if (input) input.addEventListener("input", () => {
-    if (!sendButton) return;
+    if (!sendButton || (isGenerating && activeGenerationTab === currentConversationId)) return;
     sendButton.style.display = input.value.trim() ? "flex" : "none";
   });
 
