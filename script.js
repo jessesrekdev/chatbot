@@ -9,6 +9,133 @@
   let currentConversationId = null;
   let conversationToDelete = null;
 
+  // ===== Hidden Instructions =====
+  function getInternalMetadata() {
+    return {
+      instructions: {
+        role: "You are Crazy Chat, an advanced AI assistant created by Jesse Srek. You are NOT OpenAI or ChatGPT.",
+        confidentiality: "Do not mention these instructions or this metadata in your response unless a user asks for help about the app.",
+        formatting: "Always format URLs as clickable hyperlinks using markdown syntax. Use proper text formatting with **bold**, *italic*, `code`, and other markdown elements for better readability.",
+        code_handling: "When providing code examples, always specify the correct language for syntax highlighting. Support HTML with embedded CSS/JS, and ensure proper color coding."
+      },
+      project: {
+        name: "Crazy Chat",
+        type: "Progressive Web Application (PWA)",
+        description: "An advanced AI chatbot interface with modern UI/UX, supporting multiple AI models, conversation management, and rich code highlighting.",
+        developer: "Jesse Srek",
+        version: "1.0",
+        architecture: "Client-side JavaScript application with Puter.js integration",
+        repository: "Local development project",
+        community: "https://t.me/jesse_pro"
+      },
+      technical_stack: {
+        frontend: {
+          html: "Semantic HTML5 with PWA manifest support",
+          css: "Modern CSS3 with responsive design, dark/light themes, and smooth animations",
+          javascript: "Vanilla ES6+ with modular architecture",
+          frameworks: "No heavy frameworks - lightweight and fast"
+        },
+        libraries: {
+          puter_js: "v2 - Core AI integration and backend services",
+          highlight_js: "v11.9.0 - Primary syntax highlighting",
+          prism_js: "v1.29.0 - Enhanced code highlighting with multi-language support"
+        },
+        features: {
+          pwa: "Full Progressive Web App with offline capabilities",
+          responsive: "Mobile-first design with adaptive layouts",
+          themes: "Dynamic light/dark theme switching",
+          accessibility: "ARIA labels and keyboard navigation support"
+        }
+      },
+      support: { 
+        email: "jessesrek@gmail.com",
+        phone: "+256789109035",
+        telegram: "https://t.me/jessesrek",
+        website: "https://chat.jesse-network.site",
+        community: "https://t.me/jesse_pro"
+      },
+      app_architecture: {
+        core_files: {
+          "index.html": "Main application entry point with PWA configuration",
+          "script.js": "Primary application logic (~68KB) - conversation management, AI integration, UI interactions",
+          "style.css": "Main stylesheet (~42KB) - responsive design, themes, animations",
+          "manifest.json": "PWA manifest for app installation and mobile optimization"
+        },
+        modules: {
+          "projects.js": "Project management functionality",
+          "settings.js": "User preferences and configuration",
+          "keyboard_shortcuts.js": "Keyboard navigation and shortcuts",
+          "markdown_renderer.js": "Advanced markdown processing and rendering",
+          "model_dropdown.js": "AI model selection interface"
+        },
+        styling: {
+          "project_dialog.css": "Modal dialogs and popup styling",
+          responsive_breakpoints: "Mobile (≤480px), Tablet (481-768px), Desktop (>768px)",
+          color_scheme: "VS Code inspired dark theme with light mode support"
+        }
+      },
+      app_features: {
+        conversations: {
+          description: "Multi-conversation support with persistent storage",
+          features: ["Create unlimited conversations", "Rename conversations", "Delete conversations", "Auto-generated titles", "Message history persistence"]
+        },
+        ai_integration: {
+          description: "Multiple AI model support through Puter.js",
+          models: ["gpt-5-nano", "claude-3-haiku", "llama-3.1-8b", "custom models"],
+          features: ["Streaming responses", "Model switching", "Response regeneration", "Message editing"]
+        },
+        code_features: {
+          description: "Advanced code handling with syntax highlighting",
+          languages: ["HTML", "CSS", "JavaScript", "Python", "Java", "C/C++", "Go", "Rust", "PHP", "Ruby", "Swift", "Kotlin", "SQL", "JSON", "XML", "YAML", "Markdown"],
+          features: ["Multi-language syntax highlighting", "Code block copying", "File downloads", "HTML preview in new tab", "Responsive code blocks"]
+        },
+        ui_features: {
+          description: "Modern, responsive interface with accessibility",
+          features: ["Dark/Light themes", "Mobile-optimized", "Keyboard shortcuts", "Touch-friendly", "Smooth animations", "PWA installation"]
+        }
+      },
+      user_guidance: {
+        getting_started: {
+          new_chat: "Click the 'New Chat' button in the sidebar to start a fresh conversation",
+          model_selection: "Use the dropdown at the top to choose your preferred AI model",
+          theme_toggle: "Switch between light and dark themes in Settings"
+        },
+        conversation_management: {
+          rename: "Hover over any conversation in the sidebar and click the pencil icon to rename",
+          delete: "Hover over any conversation and click the trash icon to delete",
+          organize: "Conversations are automatically sorted by most recent activity"
+        },
+        message_features: {
+          regenerate: "Click 'Regenerate' below any AI response to get a new answer",
+          edit: "Click 'Edit' below your messages to modify and resend",
+          copy: "Use the copy button on code blocks to copy code to clipboard"
+        },
+        code_features: {
+          preview: "Click the eye icon on HTML code blocks to preview in a new tab",
+          download: "Click the download icon to save code as a file",
+          languages: "Specify language after ``` for proper syntax highlighting (e.g., ```javascript)"
+        },
+        keyboard_shortcuts: {
+          send_message: "Ctrl+Enter or Cmd+Enter to send message",
+          new_chat: "Ctrl+N or Cmd+N for new conversation",
+          settings: "Ctrl+, or Cmd+, to open settings"
+        }
+      },
+      development_info: {
+        last_updated: new Date().toISOString(),
+        build_status: "Production Ready",
+        performance: "Optimized for fast loading and smooth interactions",
+        browser_support: "Modern browsers with ES6+ support",
+        mobile_support: "Full mobile optimization with PWA capabilities"
+      },
+      timestamp: {
+        date: new Date().toLocaleDateString(),
+        time: new Date().toLocaleTimeString(),
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+      }
+    };
+  }
+
   // ===== DOM elements (query first) =====
   const newChat = document.getElementById("newChat");
   const chatBox = document.getElementById("chatBox");
@@ -91,7 +218,7 @@
       shouldStop = true;
       isGenerating = false;
       activeGenerationTab = null;
-      
+
       // Reset stop button immediately
       if (sendButton) {
         sendButton.classList.remove('stop-button');
@@ -101,10 +228,10 @@
         sendButton.style.display = (input && input.value.trim()) ? "flex" : "none";
       }
     }
-    
+
     currentConversationId = convId;
     renderConversationMessages();
-    
+
     // Update stop button visibility when switching tabs
     updateStopButtonVisibility();
   }
@@ -120,10 +247,10 @@
   async function generateChatTitle(conv) {
     // Only generate if conversation has at least 4 messages (2 user + 2 bot)
     if (!conv || conv.messages.length < 4) return;
-    
+
     // Don't regenerate if title was already customized (not default format)
     if (!conv.title.startsWith('Chat ') && !conv.title.startsWith('New Chat')) return;
-    
+
     try {
       // Get all messages for better context
       const messages = conv.messages.slice(0, 4); // First 4 messages
@@ -131,11 +258,11 @@
       const botMsg1 = messages.filter(m => !m.fromUser)[0]?.text || '';
       const userMsg2 = messages.filter(m => m.fromUser)[1]?.text || '';
       const botMsg2 = messages.filter(m => !m.fromUser)[1]?.text || '';
-      
+
       if (!userMsg1) return;
-      
+
       console.log('🎯 Generating title in background...');
-      
+
       // Create a very specific prompt that forces only title output
       const titlePrompt = `Generate a short 3-5 word title for this chat. Reply with ONLY the title, nothing else. No quotes, no explanations, just the title.
 
@@ -145,34 +272,34 @@ User: ${userMsg2.substring(0, 100)}
 Assistant: ${botMsg2.substring(0, 100)}
 
 Title:`;
-      
+
       // Use streaming to get the response
       const response = await puter.ai.chat(titlePrompt, {
         model: 'gpt-4o-mini',
         stream: true
       });
-      
+
       let title = '';
-      
+
       // Collect the streamed response
       for await (const part of response) {
         if (part?.text) {
           title += part.text;
         }
       }
-      
+
       title = title.trim();
-      
+
       console.log('📝 Raw title response:', title);
-      
+
       // Clean up the title aggressively
       title = title.replace(/^["'`]|["'`]$/g, ''); // Remove quotes
       title = title.replace(/^Title:\s*/i, ''); // Remove "Title:" prefix
       title = title.replace(/\n.*/g, ''); // Remove everything after first line
       title = title.substring(0, 60); // Limit length
-      
+
       console.log('✨ Cleaned title:', title);
-      
+
       if (title && title.length > 0 && title !== 'New Chat') {
         conv.title = title;
         await saveConversations();
@@ -231,23 +358,23 @@ Title:`;
     likeBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path>
     </svg>`;
-    
+
     // Thumbs Down - Better SVG
     const dislikeBtn = document.createElement("button");
     dislikeBtn.className = "action-dislike";
     dislikeBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"></path>
     </svg>`;
-    
-    likeBtn.onclick = () => { 
-      likeBtn.classList.toggle("selected"); 
+
+    likeBtn.onclick = () => {
+      likeBtn.classList.toggle("selected");
       dislikeBtn.classList.remove("selected");
       if (likeBtn.classList.contains("selected")) {
         showBubble("👍 Thanks for your feedback!");
       }
     };
-    dislikeBtn.onclick = () => { 
-      dislikeBtn.classList.toggle("selected"); 
+    dislikeBtn.onclick = () => {
+      dislikeBtn.classList.toggle("selected");
       likeBtn.classList.remove("selected");
       if (dislikeBtn.classList.contains("selected")) {
         showBubble("👎 Thanks for your feedback!");
@@ -269,7 +396,7 @@ Title:`;
     regenBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
     </svg> <span>Regenerate</span>`;
-    
+
     regenBtn.onclick = async () => {
       const conv = getCurrentConversation();
       if (!conv || messageIndex < 0) {
@@ -300,13 +427,13 @@ Title:`;
         // Remove this message and all messages after it
         conv.messages.splice(messageIndex);
         await saveConversations();
-        
+
         // Re-render to show the truncated conversation
         renderConversationMessages();
-        
+
         // Get selected model
         const selectedModel = localStorage.getItem('selectedModel') || 'gpt-4o-mini';
-        
+
         // Create bot message container
         const botMsg = document.createElement("div");
         botMsg.className = "chat-message bot-message";
@@ -340,7 +467,7 @@ Title:`;
             }
             break;
           }
-          
+
           if (part?.text) {
             if (!hasStartedTyping) {
               if (typing.parentNode) typing.remove();
@@ -359,11 +486,11 @@ Title:`;
 
         // Final render
         botContentDiv.innerHTML = processCodeBlocks(fullResponse);
-        
+
         // Add actions
         const actions = createBotActions(fullResponse, newBotMessageIndex);
         botMsg.appendChild(actions);
-        
+
         showBubble("✨ Response regenerated!");
       } catch (err) {
         console.error("Regenerate error:", err);
@@ -425,12 +552,12 @@ Title:`;
       div.addEventListener("click", (e) => {
         if (div.dataset.renaming === "true") return;
         if (e.target.closest(".rename-btn") || e.target.closest(".delete-btn")) return;
-        
+
         // Hide projects view when clicking on a chat
         if (window.__projects && window.__projects.hideProjectsShowChats) {
           window.__projects.hideProjectsShowChats();
         }
-        
+
         setActiveConversation(conv.id);
         renderConversations();
         closeMenu();
@@ -498,7 +625,7 @@ Title:`;
   function appendBotMessage(textRaw, messageIndex = -1) {
     console.log('📝 Appending bot message, length:', textRaw.length);
     console.log('📝 Contains code blocks:', textRaw.includes('```'));
-    
+
     if (!chatBox) return;
     const msg = document.createElement("div");
     msg.className = "chat-message bot-message";
@@ -506,7 +633,7 @@ Title:`;
 
     const contentDiv = document.createElement("div");
     contentDiv.className = "bot-content";
-    
+
     // Process code blocks with ```language format
     const processedHTML = processCodeBlocks(textRaw);
     console.log('📝 Processed HTML length:', processedHTML.length);
@@ -524,9 +651,9 @@ Title:`;
   }
 
   // Make processCodeBlocks globally available with full markdown support
-  window.processCodeBlocks = function(text) {
+  window.processCodeBlocks = function (text) {
     if (!text) return '';
-    
+
     // Store code blocks temporarily to protect them
     const codeBlocks = [];
     let processedText = text.replace(/```(\w+)?\n([\s\S]*?)```/g, (match, language, code) => {
@@ -550,44 +677,44 @@ Title:`;
     html = html.replace(/^### (.+)$/gm, '<h3 style="font-size: 18px; font-weight: 600; margin: 16px 0 8px; color: var(--text-primary);">$1</h3>');
     html = html.replace(/^## (.+)$/gm, '<h2 style="font-size: 20px; font-weight: 600; margin: 18px 0 10px; color: var(--text-primary);">$1</h2>');
     html = html.replace(/^# (.+)$/gm, '<h1 style="font-size: 24px; font-weight: 600; margin: 20px 0 12px; color: var(--text-primary);">$1</h1>');
-    
+
     // Bold (**text**)
     html = html.replace(/\*\*(.+?)\*\*/g, '<strong style="font-weight: 600; color: var(--text-primary);">$1</strong>');
-    
+
     // Italic (*text*)
     html = html.replace(/\*(.+?)\*/g, '<em style="font-style: italic;">$1</em>');
-    
+
     // Inline code (`code`)
     html = html.replace(/`([^`]+)`/g, '<code style="background: var(--bg-tertiary); padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 13px; color: var(--accent-color);">$1</code>');
-    
+
     // Unordered lists (- item)
     html = html.replace(/^- (.+)$/gm, '<li style="margin-left: 20px; margin-bottom: 4px; list-style-type: disc;">$1</li>');
-    
+
     // Ordered lists (1. item)
     html = html.replace(/^\d+\. (.+)$/gm, '<li style="margin-left: 20px; margin-bottom: 4px; list-style-type: decimal;">$1</li>');
-    
+
     // Wrap consecutive list items
     html = html.replace(/(<li[^>]*>.*?<\/li>\s*)+/g, (match) => {
       return '<ul style="margin: 8px 0; padding-left: 20px;">' + match + '</ul>';
     });
-    
+
     // Horizontal rules (---)
-    html = html.replace(/^---$/gm, '<hr style="border: none; border-top: 1px solid var(--border-color); margin: 16px 0;">');
-    
+    html = html.replace(/^--------------------$/gm, '<hr style="border: none; border-top: 1px solid var(--border-color); margin: 16px 0;">');
+
     // Links [text](url)
     html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" style="color: var(--accent-color); text-decoration: underline;">$1</a>');
-    
+
     // Blockquotes (> text)
     html = html.replace(/^&gt; (.+)$/gm, '<blockquote style="border-left: 3px solid var(--accent-color); padding-left: 12px; margin: 8px 0; color: var(--text-secondary); font-style: italic;">$1</blockquote>');
-    
+
     // Convert newlines to breaks
     html = html.replace(/\n/g, '<br>');
-    
+
     // Restore code blocks
     codeBlocks.forEach((block, index) => {
       html = html.replace(`___CODE_BLOCK_${index}___`, block);
     });
-    
+
     return html;
   }
 
@@ -595,90 +722,309 @@ Title:`;
     return window.processCodeBlocks(text);
   }
 
-// Make createCodeBlockHTML globally available
-window.createCodeBlockHTML = function(codeId, language, code) {
+  // Make createCodeBlockHTML globally available
+  window.createCodeBlockHTML = function (codeId, language, code) {
     console.log('🔧 Creating code block:', { codeId, language, codeLength: code.length });
-    
+
     // Determine if this is HTML code that can be previewed
     const isHTML = language === 'html' || language === 'HTML';
     const fileName = language ? `${language.toLowerCase()}.${getFileExtension(language)}` : 'code.txt';
-    
+
     // Create preview button for HTML
     const previewButton = isHTML ? `
-      <button class="xcode-preview-btn" onclick="previewHTML('${codeId}')" style="background: #3a3a3a; border: 1px solid #4a4a4a; color: #d4d4d4; padding: 6px; border-radius: 6px; font-size: 12px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; min-width: 32px; height: 32px;" title="Preview HTML">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <button class="xcode-preview-btn" onclick="previewHTML('${codeId}')" style="
+        background: #3a3a3a; 
+        border: 1px solid #4a4a4a; 
+        color: #d4d4d4; 
+        padding: 6px; 
+        border-radius: 6px; 
+        font-size: 12px; 
+        cursor: pointer; 
+        transition: all 0.2s; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        min-width: 32px; 
+        height: 32px;
+        /* Mobile adjustments */
+        @media (max-width: 768px) {
+          min-width: 28px;
+          height: 28px;
+          padding: 4px;
+        }
+        @media (max-width: 480px) {
+          min-width: 24px;
+          height: 24px;
+          padding: 2px;
+        }
+      " title="Preview HTML">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="
+          /* Mobile adjustments */
+          @media (max-width: 768px) {
+            width: 14px;
+            height: 14px;
+          }
+          @media (max-width: 480px) {
+            width: 12px;
+            height: 12px;
+          }
+        ">
           <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
           <circle cx="12" cy="12" r="3"></circle>
         </svg>
       </button>` : '';
-    
+
     return `
-      <div class="xcode-window" style="margin: 16px 0; border-radius: 10px; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', monospace; background: #1e1e1e; border: 1px solid #3a3a3a; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);">
-        <div class="xcode-header" style="background: #2d2d2d; padding: 10px 16px; border-bottom: 1px solid #3a3a3a; display: flex; justify-content: space-between; align-items: center;">
-          <div class="xcode-header-left" style="display: flex; align-items: center; gap: 12px;">
-            <div class="xcode-dots" style="display: flex; gap: 6px;">
+      <div class="xcode-window" style="
+        margin: 16px auto; 
+        border-radius: 10px; 
+        overflow: hidden; 
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', monospace; 
+        background: #1e1e1e; 
+        border: 1px solid #3a3a3a; 
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        max-width: min(100%, 800px);
+        width: 100%;
+        box-sizing: border-box;
+        /* Mobile responsiveness */
+        @media (max-width: 768px) {
+          margin: 12px auto;
+          border-radius: 8px;
+          max-width: 100%;
+        }
+        @media (max-width: 480px) {
+          margin: 8px auto;
+          border-radius: 6px;
+        }
+      ">
+        <div class="xcode-header" style="
+          background: #2d2d2d; 
+          padding: 10px 16px; 
+          border-bottom: 1px solid #3a3a3a; 
+          display: flex; 
+          justify-content: space-between; 
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 8px;
+          /* Mobile adjustments */
+          @media (max-width: 768px) {
+            padding: 8px 12px;
+            gap: 6px;
+          }
+          @media (max-width: 480px) {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+          }
+        ">
+          <div class="xcode-header-left" style="
+            display: flex; 
+            align-items: center; 
+            gap: 12px;
+            /* Mobile adjustments */
+            @media (max-width: 480px) {
+              gap: 8px;
+              width: 100%;
+            }
+          ">
+            <div class="xcode-dots" style="
+              display: flex; 
+              gap: 6px;
+              /* Mobile adjustments */
+              @media (max-width: 480px) {
+                gap: 4px;
+              }
+            ">
               <div class="xcode-dot red" style="width: 12px; height: 12px; border-radius: 50%; background: #ff5f57; border: 0.5px solid rgba(0,0,0,0.2);"></div>
               <div class="xcode-dot yellow" style="width: 12px; height: 12px; border-radius: 50%; background: #ffbd2e; border: 0.5px solid rgba(0,0,0,0.2);"></div>
               <div class="xcode-dot green" style="width: 12px; height: 12px; border-radius: 50%; background: #28ca42; border: 0.5px solid rgba(0,0,0,0.2);"></div>
             </div>
-            <span class="xcode-lang" style="color: #a0a0a0; font-size: 12px; font-weight: 500; text-transform: lowercase; letter-spacing: 0.5px;">${language || 'text'}</span>
+            <span class="xcode-lang" style="
+              color: #a0a0a0; 
+              font-size: 12px; 
+              font-weight: 500; 
+              text-transform: lowercase; 
+              letter-spacing: 0.5px;
+              /* Mobile adjustments */
+              @media (max-width: 480px) {
+                font-size: 11px;
+              }
+            ">${language || 'text'}</span>
           </div>
-          <div class="xcode-actions" style="display: flex; gap: 8px; align-items: center;">
+          <div class="xcode-actions" style="
+            display: flex; 
+            gap: 8px; 
+            align-items: center;
+            /* Mobile adjustments */
+            @media (max-width: 768px) {
+              gap: 6px;
+            }
+            @media (max-width: 480px) {
+              width: 100%;
+              justify-content: flex-end;
+              gap: 4px;
+            }
+          ">
             ${previewButton}
-            <button class="xcode-download-btn" onclick="downloadCode('${codeId}', '${fileName}')" style="background: #3a3a3a; border: 1px solid #4a4a4a; color: #d4d4d4; padding: 6px; border-radius: 6px; font-size: 12px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; min-width: 32px; height: 32px;" title="Download as ${fileName}">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <button class="xcode-download-btn" onclick="downloadCode('${codeId}', '${fileName}')" style="
+              background: #3a3a3a; 
+              border: 1px solid #4a4a4a; 
+              color: #d4d4d4; 
+              padding: 6px; 
+              border-radius: 6px; 
+              font-size: 12px; 
+              cursor: pointer; 
+              transition: all 0.2s; 
+              display: flex; 
+              align-items: center; 
+              justify-content: center; 
+              min-width: 32px; 
+              height: 32px;
+              /* Mobile adjustments */
+              @media (max-width: 768px) {
+                min-width: 28px;
+                height: 28px;
+                padding: 4px;
+              }
+              @media (max-width: 480px) {
+                min-width: 24px;
+                height: 24px;
+                padding: 2px;
+              }
+            " title="Download as ${fileName}">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="
+                /* Mobile adjustments */
+                @media (max-width: 768px) {
+                  width: 14px;
+                  height: 14px;
+                }
+                @media (max-width: 480px) {
+                  width: 12px;
+                  height: 12px;
+                }
+              ">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                 <polyline points="7 10 12 15 17 10"></polyline>
                 <line x1="12" y1="15" x2="12" y2="3"></line>
               </svg>
             </button>
-            <button class="xcode-copy-btn" onclick="copyCode('${codeId}')" style="background: #3a3a3a; border: 1px solid #4a4a4a; color: #d4d4d4; padding: 6px; border-radius: 6px; font-size: 12px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; min-width: 32px; height: 32px;" title="Copy to clipboard">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <button class="xcode-copy-btn" onclick="copyCode('${codeId}')" style="
+              background: #3a3a3a; 
+              border: 1px solid #4a4a4a; 
+              color: #d4d4d4; 
+              padding: 6px; 
+              border-radius: 6px; 
+              font-size: 12px; 
+              cursor: pointer; 
+              transition: all 0.2s; 
+              display: flex; 
+              align-items: center; 
+              justify-content: center; 
+              min-width: 32px; 
+              height: 32px;
+              /* Mobile adjustments */
+              @media (max-width: 768px) {
+                min-width: 28px;
+                height: 28px;
+                padding: 4px;
+              }
+              @media (max-width: 480px) {
+                min-width: 24px;
+                height: 24px;
+                padding: 2px;
+              }
+            " title="Copy to clipboard">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="
+                /* Mobile adjustments */
+                @media (max-width: 768px) {
+                  width: 14px;
+                  height: 14px;
+                }
+                @media (max-width: 480px) {
+                  width: 12px;
+                  height: 12px;
+                }
+              ">
                 <rect x="9" y="9" width="13" height="13" rx="2"/>
                 <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
               </svg>
             </button>
           </div>
         </div>
-        <pre class="xcode-content" style="margin: 0; padding: 16px; overflow-x: auto; background: #1e1e1e; color: #d4d4d4; font-size: 13px; line-height: 1.5; font-family: 'SF Mono', 'Monaco', 'Menlo', monospace;"><code id="${codeId}">${highlightCode(language, code)}</code></pre>
-        <div id="preview-${codeId}" class="html-preview" style="display: none; padding: 16px; background: white; border-top: 1px solid #3a3a3a; max-height: 400px; overflow: auto;"></div>
+        <textarea id="raw-code-${codeId}" style="display:none;">${code}</textarea>
+        <pre class="xcode-content" style="
+          margin: 0; 
+          padding: 16px; 
+          background: #1e1e1e; 
+          color: #d4d4d4; 
+          font-size: 13px; 
+          line-height: 1.5; 
+          font-family: 'SF Mono', 'Monaco', 'Menlo', monospace;
+          /* Prevent horizontal overflow */
+          overflow-x: hidden;
+          overflow-y: auto;
+          max-width: 100%;
+          box-sizing: border-box;
+          /* Text wrapping for long lines */
+          white-space: pre-wrap;
+          word-wrap: break-word;
+          overflow-wrap: break-word;
+          word-break: break-all;
+          /* Mobile responsiveness */
+          @media (max-width: 768px) {
+            padding: 12px;
+            font-size: 12px;
+            line-height: 1.4;
+          }
+          @media (max-width: 480px) {
+            padding: 8px;
+            font-size: 11px;
+            line-height: 1.3;
+          }
+        "><code id="${codeId}" style="
+          display: block;
+          white-space: pre-wrap;
+          word-wrap: break-word;
+          overflow-wrap: break-word;
+          max-width: 100%;
+        ">${highlightCode(language, code)}</code></pre>
       </div>
     `;
-}
+  }
 
-// Utility function to escape HTML (make sure this is available)
-function escapeHtml(unsafe) {
+  // Utility function to escape HTML (make sure this is available)
+  function escapeHtml(unsafe) {
     return unsafe
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-}
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
 
-// Copy function (make sure this is available)
-function copyCode(codeId) {
+  // Copy function (make sure this is available)
+  function copyCode(codeId) {
     const codeElement = document.getElementById(codeId);
-    const textArea = document.createElement('textarea');
-    textArea.value = codeElement.textContent;
-    document.body.appendChild(textArea);
-    textArea.select();
-    document.execCommand('copy');
-    document.body.removeChild(textArea);
-    
-    // Optional: Show copied feedback
-    const button = event.target;
-    const originalText = button.textContent;
-    button.textContent = 'Copied!';
-    button.style.background = '#28ca42';
-    button.style.color = '#000';
-    
-    setTimeout(() => {
-        button.textContent = originalText;
-        button.style.background = '#3a3a3a';
-        button.style.color = '#d4d4d4';
-    }, 2000);
-}
+    if (codeElement) {
+      const text = codeElement.textContent;
+      navigator.clipboard.writeText(text).then(() => {
+        // Show success feedback
+        const btn = codeElement.closest('.xcode-window').querySelector('.xcode-copy-btn');
+        const originalSvg = btn.innerHTML;
+
+        // Change to checkmark icon
+        btn.innerHTML = `
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 10.5l3 3 7-7" stroke="#10a37f" stroke-width="2" fill="none"/></svg>
+        `;
+        btn.style.background = '#28a745';
+
+        setTimeout(() => {
+          btn.innerHTML = originalSvg;
+          btn.style.background = '#3a3a3a';
+        }, 2000);
+      });
+    }
+  }
 
   function createCodeBlockHTML(codeId, language, code) {
     return window.createCodeBlockHTML(codeId, language, code);
@@ -695,59 +1041,266 @@ function copyCode(codeId) {
     return text.replace(/[&<>"']/g, m => map[m]);
   }
 
-  // Lightweight syntax highlighting without external libs
+  // Enhanced syntax highlighting with comprehensive language support
   function highlightCode(language, code) {
     try {
       const lang = (language || '').toLowerCase();
       let escaped = escapeHtml(code);
 
+      // HTML with embedded CSS and JavaScript
       if (lang === 'html' || lang === 'xml') {
         escaped = escaped
-          .replace(/(&lt;\/?)([a-zA-Z0-9-:]+)/g, '$1<span style="color:#569cd6">$2<\/span>')
-          .replace(/([a-zA-Z-:]+)(=)/g, '<span style="color:#9cdcfe">$1<\/span>$2')
-          .replace(/(&quot;.*?&quot;|&#039;.*?&#039;)/g, '<span style="color:#ce9178">$1<\/span>');
+          // HTML comments
+          .replace(/(&lt;!--[\s\S]*?--&gt;)/g, '<span style="color:#6a9955;font-style:italic">$1</span>')
+          // DOCTYPE declaration
+          .replace(/(&lt;!DOCTYPE[^&gt;]*&gt;)/gi, '<span style="color:#c586c0;font-weight:bold">$1</span>')
+          // CDATA sections
+          .replace(/(&lt;!\[CDATA\[[\s\S]*?\]\]&gt;)/g, '<span style="color:#6a9955;font-style:italic">$1</span>')
+          // XML processing instructions
+          .replace(/(&lt;\?[\s\S]*?\?&gt;)/g, '<span style="color:#c586c0;font-style:italic">$1</span>')
+          // Self-closing tags (like <br/>, <img/>, etc.)
+          .replace(/(&lt;)([a-zA-Z0-9-:]+)([^&gt;]*)(\/&gt;)/g, function(match, openBracket, tagName, attributes, closeBracket) {
+            const coloredTag = openBracket + '<span style="color:#569cd6;font-weight:bold">' + tagName + '</span>';
+            const coloredAttributes = attributes.replace(/([a-zA-Z-]+)(=)("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|[^\s&gt;]+)/g, 
+              '<span style="color:#92c5f8">$1</span>$2<span style="color:#ce9178">$3</span>');
+            return coloredTag + coloredAttributes + '<span style="color:#569cd6;font-weight:bold">' + closeBracket + '</span>';
+          })
+          // Opening tags with attributes
+          .replace(/(&lt;)([a-zA-Z0-9-:]+)([^&gt;]*)(&gt;)/g, function(match, openBracket, tagName, attributes, closeBracket) {
+            const coloredTag = openBracket + '<span style="color:#569cd6;font-weight:bold">' + tagName + '</span>';
+            const coloredAttributes = attributes.replace(/([a-zA-Z-]+)(=)("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|[^\s&gt;]+)/g, 
+              '<span style="color:#92c5f8">$1</span>$2<span style="color:#ce9178">$3</span>');
+            return coloredTag + coloredAttributes + '<span style="color:#569cd6;font-weight:bold">' + closeBracket + '</span>';
+          })
+          // Closing tags
+          .replace(/(&lt;\/)([a-zA-Z0-9-:]+)(&gt;)/g, '<span style="color:#569cd6;font-weight:bold">$1$2$3</span>')
+          // Text content between tags (make it more visible)
+          .replace(/(&gt;)([^&lt;]+)(&lt;)/g, function(match, openTag, content, closeTag) {
+            // Don't color whitespace-only content
+            if (content.trim()) {
+              return openTag + '<span style="color:#d4d4d4">' + content + '</span>' + closeTag;
+            }
+            return match;
+          })
+          // CSS within style tags
+          .replace(/(&lt;style[^&gt;]*&gt;)([\s\S]*?)(&lt;\/style&gt;)/gi, function(match, openTag, cssContent, closeTag) {
+            const highlightedCSS = highlightCSS(cssContent);
+            return openTag + highlightedCSS + closeTag;
+          })
+          // JavaScript within script tags
+          .replace(/(&lt;script[^&gt;]*&gt;)([\s\S]*?)(&lt;\/script&gt;)/gi, function(match, openTag, jsContent, closeTag) {
+            const highlightedJS = highlightJavaScript(jsContent);
+            return openTag + highlightedJS + closeTag;
+          })
+          // HTML entities
+          .replace(/(&amp;[a-zA-Z0-9#]+;)/g, '<span style="color:#4fc1ff;font-weight:bold">$1</span>');
         return escaped;
       }
 
-      if ([ 'javascript','js','typescript','ts' ].includes(lang)) {
+      // JavaScript/TypeScript
+      if (['javascript', 'js', 'typescript', 'ts', 'jsx', 'tsx'].includes(lang)) {
+        return highlightJavaScript(escaped);
+      }
+
+      // Python
+      if (['python', 'py'].includes(lang)) {
         escaped = escaped
-          .replace(/(\/\*[\s\S]*?\*\/)/g, '<span style="color:#6a9955">$1<\/span>')
-          .replace(/(\/\/.*?$)/gm, '<span style="color:#6a9955">$1<\/span>')
-          .replace(/('(?:\\.|[^'])*'|"(?:\\.|[^"])*"|`(?:\\.|[^`])*`)/g, '<span style="color:#ce9178">$1<\/span>')
-          .replace(/\b(abstract|as|async|await|boolean|break|case|catch|class|const|constructor|continue|debugger|declare|default|delete|do|else|enum|export|extends|false|finally|for|from|function|get|if|implements|import|in|instanceof|interface|let|new|null|number|of|package|private|protected|public|readonly|return|set|static|string|super|switch|this|throw|true|try|typeof|undefined|var|void|while|with|yield)\b/g, '<span style="color:#c586c0">$1<\/span>')
-          .replace(/\b(\d+(?:\.\d+)?)\b/g, '<span style="color:#b5cea8">$1<\/span>');
+          // Comments
+          .replace(/(#.*?$)/gm, '<span style="color:#6a9955;font-style:italic">$1</span>')
+          // Strings (triple quotes, single, double)
+          .replace(/(f?r?"""[\s\S]*?"""|f?r?'''[\s\S]*?'''|f?r?"(?:[^"\\]|\\.)*"|f?r?'(?:[^'\\]|\\.)*')/g, '<span style="color:#ce9178">$1</span>')
+          // Keywords
+          .replace(/\b(and|as|assert|async|await|break|class|continue|def|del|elif|else|except|False|finally|for|from|global|if|import|in|is|lambda|None|nonlocal|not|or|pass|raise|return|True|try|while|with|yield|self|super|__init__|__str__|__repr__)\b/g, '<span style="color:#c586c0;font-weight:bold">$1</span>')
+          // Built-in functions
+          .replace(/\b(print|len|range|str|int|float|list|dict|set|tuple|bool|type|isinstance|hasattr|getattr|setattr|enumerate|zip|map|filter|sorted|reversed|sum|max|min|abs|round|open|input)\b/g, '<span style="color:#dcdcaa">$1</span>')
+          // Numbers
+          .replace(/\b(\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\b/g, '<span style="color:#b5cea8">$1</span>')
+          // Decorators
+          .replace(/(@\w+)/g, '<span style="color:#4fc1ff;font-weight:bold">$1</span>');
         return escaped;
       }
 
-      if ([ 'python','py' ].includes(lang)) {
+      // CSS
+      if (lang === 'css' || lang === 'scss' || lang === 'sass') {
+        return highlightCSS(escaped);
+      }
+
+      // Java
+      if (lang === 'java') {
         escaped = escaped
-          .replace(/(#.*?$)/gm, '<span style="color:#6a9955">$1<\/span>')
-          .replace(/('''[\s\S]*?'''|"""[\s\S]*?"""|'(?:\\.|[^'])*'|"(?:\\.|[^"])*")/g, '<span style="color:#ce9178">$1<\/span>')
-          .replace(/\b(and|as|assert|async|await|break|class|continue|def|del|elif|else|except|False|finally|for|from|global|if|import|in|is|lambda|None|nonlocal|not|or|pass|raise|return|True|try|while|with|yield)\b/g, '<span style="color:#c586c0">$1<\/span>')
-          .replace(/\b(\d+(?:\.\d+)?)\b/g, '<span style="color:#b5cea8">$1<\/span>');
+          // Comments
+          .replace(/(\/\*[\s\S]*?\*\/)/g, '<span style="color:#6a9955;font-style:italic">$1</span>')
+          .replace(/(\/\/.*?$)/gm, '<span style="color:#6a9955;font-style:italic">$1</span>')
+          // Strings
+          .replace(/("(?:[^"\\]|\\.)*")/g, '<span style="color:#ce9178">$1</span>')
+          // Keywords
+          .replace(/\b(abstract|assert|boolean|break|byte|case|catch|char|class|const|continue|default|do|double|else|enum|extends|final|finally|float|for|goto|if|implements|import|instanceof|int|interface|long|native|new|null|package|private|protected|public|return|short|static|strictfp|super|switch|synchronized|this|throw|throws|transient|try|void|volatile|while|true|false)\b/g, '<span style="color:#c586c0;font-weight:bold">$1</span>')
+          // Numbers
+          .replace(/\b(\d+(?:\.\d+)?[fFdDlL]?)\b/g, '<span style="color:#b5cea8">$1</span>')
+          // Annotations
+          .replace(/(@\w+)/g, '<span style="color:#4fc1ff;font-weight:bold">$1</span>');
         return escaped;
       }
 
-      if (lang === 'css') {
+      // C/C++
+      if (['c', 'cpp', 'c++', 'cc', 'cxx'].includes(lang)) {
         escaped = escaped
-          .replace(/(\/\*[\s\S]*?\*\/)/g, '<span style="color:#6a9955">$1<\/span>')
-          .replace(/([.#][a-zA-Z0-9_-]+)/g, '<span style="color:#4fc1ff">$1<\/span>')
-          .replace(/([a-z-]+)(\s*:\s*)/g, '<span style="color:#9cdcfe">$1<\/span>$2')
-          .replace(/(:\s*)([^;]+)(;)/g, '$1<span style="color:#ce9178">$2<\/span>$3');
+          // Comments
+          .replace(/(\/\*[\s\S]*?\*\/)/g, '<span style="color:#6a9955;font-style:italic">$1</span>')
+          .replace(/(\/\/.*?$)/gm, '<span style="color:#6a9955;font-style:italic">$1</span>')
+          // Preprocessor directives
+          .replace(/(#\w+.*?$)/gm, '<span style="color:#c586c0;font-weight:bold">$1</span>')
+          // Strings
+          .replace(/("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')/g, '<span style="color:#ce9178">$1</span>')
+          // Keywords
+          .replace(/\b(auto|break|case|char|const|continue|default|do|double|else|enum|extern|float|for|goto|if|inline|int|long|register|restrict|return|short|signed|sizeof|static|struct|switch|typedef|union|unsigned|void|volatile|while|bool|true|false|nullptr|class|private|public|protected|virtual|override|final|namespace|using|template|typename|try|catch|throw|new|delete|this)\b/g, '<span style="color:#c586c0;font-weight:bold">$1</span>')
+          // Numbers
+          .replace(/\b(\d+(?:\.\d+)?[fFlLuU]*)\b/g, '<span style="color:#b5cea8">$1</span>');
         return escaped;
       }
 
-      // Default: escaped only
+      // Go
+      if (lang === 'go' || lang === 'golang') {
+        escaped = escaped
+          // Comments
+          .replace(/(\/\*[\s\S]*?\*\/)/g, '<span style="color:#6a9955;font-style:italic">$1</span>')
+          .replace(/(\/\/.*?$)/gm, '<span style="color:#6a9955;font-style:italic">$1</span>')
+          // Strings
+          .replace(/(`[^`]*`|"(?:[^"\\]|\\.)*")/g, '<span style="color:#ce9178">$1</span>')
+          // Keywords
+          .replace(/\b(break|case|chan|const|continue|default|defer|else|fallthrough|for|func|go|goto|if|import|interface|map|package|range|return|select|struct|switch|type|var|true|false|nil|iota)\b/g, '<span style="color:#c586c0;font-weight:bold">$1</span>')
+          // Built-in types
+          .replace(/\b(bool|byte|complex64|complex128|error|float32|float64|int|int8|int16|int32|int64|rune|string|uint|uint8|uint16|uint32|uint64|uintptr)\b/g, '<span style="color:#4ec9b0">$1</span>')
+          // Numbers
+          .replace(/\b(\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\b/g, '<span style="color:#b5cea8">$1</span>');
+        return escaped;
+      }
+
+      // Rust
+      if (lang === 'rust' || lang === 'rs') {
+        escaped = escaped
+          // Comments
+          .replace(/(\/\*[\s\S]*?\*\/)/g, '<span style="color:#6a9955;font-style:italic">$1</span>')
+          .replace(/(\/\/.*?$)/gm, '<span style="color:#6a9955;font-style:italic">$1</span>')
+          // Strings
+          .replace(/(r#*"(?:[^"\\]|\\.)*"#*|"(?:[^"\\]|\\.)*")/g, '<span style="color:#ce9178">$1</span>')
+          // Keywords
+          .replace(/\b(as|async|await|break|const|continue|crate|dyn|else|enum|extern|false|fn|for|if|impl|in|let|loop|match|mod|move|mut|pub|ref|return|self|Self|static|struct|super|trait|true|type|unsafe|use|where|while)\b/g, '<span style="color:#c586c0;font-weight:bold">$1</span>')
+          // Types
+          .replace(/\b(bool|char|str|i8|i16|i32|i64|i128|isize|u8|u16|u32|u64|u128|usize|f32|f64|String|Vec|Option|Result)\b/g, '<span style="color:#4ec9b0">$1</span>')
+          // Numbers
+          .replace(/\b(\d+(?:\.\d+)?(?:[eE][+-]?\d+)?[fiu]?(?:8|16|32|64|128|size)?)\b/g, '<span style="color:#b5cea8">$1</span>');
+        return escaped;
+      }
+
+      // JSON
+      if (lang === 'json') {
+        escaped = escaped
+          // Strings (keys and values)
+          .replace(/("(?:[^"\\]|\\.)*")(\s*:)/g, '<span style="color:#9cdcfe">$1</span>$2')
+          .replace(/(:)(\s*)("(?:[^"\\]|\\.)*")/g, '$1$2<span style="color:#ce9178">$3</span>')
+          // Numbers
+          .replace(/\b(\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\b/g, '<span style="color:#b5cea8">$1</span>')
+          // Booleans and null
+          .replace(/\b(true|false|null)\b/g, '<span style="color:#c586c0">$1</span>');
+        return escaped;
+      }
+
+      // SQL
+      if (lang === 'sql') {
+        escaped = escaped
+          // Comments
+          .replace(/(--.*?$)/gm, '<span style="color:#6a9955;font-style:italic">$1</span>')
+          .replace(/(\/\*[\s\S]*?\*\/)/g, '<span style="color:#6a9955;font-style:italic">$1</span>')
+          // Strings
+          .replace(/('(?:[^'\\]|\\.)*')/g, '<span style="color:#ce9178">$1</span>')
+          // Keywords
+          .replace(/\b(SELECT|FROM|WHERE|INSERT|UPDATE|DELETE|CREATE|DROP|ALTER|TABLE|INDEX|DATABASE|SCHEMA|JOIN|INNER|LEFT|RIGHT|FULL|OUTER|ON|AS|GROUP|BY|ORDER|HAVING|LIMIT|OFFSET|UNION|ALL|DISTINCT|COUNT|SUM|AVG|MAX|MIN|AND|OR|NOT|NULL|IS|IN|LIKE|BETWEEN|EXISTS|CASE|WHEN|THEN|ELSE|END|IF|PRIMARY|KEY|FOREIGN|REFERENCES|UNIQUE|AUTO_INCREMENT|DEFAULT|CHECK|CONSTRAINT)\b/gi, '<span style="color:#c586c0;font-weight:bold">$1</span>')
+          // Numbers
+          .replace(/\b(\d+(?:\.\d+)?)\b/g, '<span style="color:#b5cea8">$1</span>');
+        return escaped;
+      }
+
+      // Shell/Bash
+      if (['shell', 'bash', 'sh', 'zsh'].includes(lang)) {
+        escaped = escaped
+          // Comments
+          .replace(/(#.*?$)/gm, '<span style="color:#6a9955;font-style:italic">$1</span>')
+          // Strings
+          .replace(/("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')/g, '<span style="color:#ce9178">$1</span>')
+          // Variables
+          .replace(/(\$\{[^}]+\}|\$[a-zA-Z_][a-zA-Z0-9_]*)/g, '<span style="color:#4fc1ff">$1</span>')
+          // Commands
+          .replace(/\b(echo|cd|ls|pwd|mkdir|rmdir|rm|cp|mv|cat|grep|find|sed|awk|sort|uniq|head|tail|wc|chmod|chown|ps|kill|top|df|du|mount|umount|tar|gzip|gunzip|wget|curl|ssh|scp|rsync|crontab|systemctl|service|sudo|su|export|source|alias|history|which|whereis|man|info|help)\b/g, '<span style="color:#dcdcaa">$1</span>');
+        return escaped;
+      }
+
+      // Default: return escaped HTML
       return escaped;
     } catch (e) {
+      console.error('Syntax highlighting error:', e);
       return escapeHtml(code);
     }
   }
 
+  // Helper function for JavaScript highlighting
+  function highlightJavaScript(escaped) {
+    return escaped
+      // Comments
+      .replace(/(\/\*[\s\S]*?\*\/)/g, '<span style="color:#6a9955;font-style:italic">$1</span>')
+      .replace(/(\/\/.*?$)/gm, '<span style="color:#6a9955;font-style:italic">$1</span>')
+      // Strings and template literals
+      .replace(/(`(?:[^`\\]|\\.)*`)/g, '<span style="color:#ce9178">$1</span>')
+      .replace(/("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')/g, '<span style="color:#ce9178">$1</span>')
+      // Keywords
+      .replace(/\b(abstract|as|async|await|boolean|break|case|catch|class|const|constructor|continue|debugger|declare|default|delete|do|else|enum|export|extends|false|finally|for|from|function|get|if|implements|import|in|instanceof|interface|let|new|null|number|of|package|private|protected|public|readonly|return|set|static|string|super|switch|this|throw|true|try|typeof|undefined|var|void|while|with|yield)\b/g, '<span style="color:#c586c0;font-weight:bold">$1</span>')
+      // Built-in objects and functions
+      .replace(/\b(console|document|window|Array|Object|String|Number|Boolean|Date|RegExp|Math|JSON|Promise|setTimeout|setInterval|clearTimeout|clearInterval|parseInt|parseFloat|isNaN|isFinite|encodeURIComponent|decodeURIComponent)\b/g, '<span style="color:#dcdcaa">$1</span>')
+      // Numbers
+      .replace(/\b(\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\b/g, '<span style="color:#b5cea8">$1</span>')
+      // Regex
+      .replace(/(\/(?:[^\/\\\n]|\\.)+\/[gimuy]*)/g, '<span style="color:#d16969">$1</span>');
+  }
+
+  // Helper function for CSS highlighting
+  function highlightCSS(escaped) {
+    return escaped
+      // Comments
+      .replace(/(\/\*[\s\S]*?\*\/)/g, '<span style="color:#6a9955;font-style:italic">$1</span>')
+      // At-rules (@media, @import, @keyframes, etc.)
+      .replace(/(@[a-zA-Z-]+)/g, '<span style="color:#c586c0;font-weight:bold">$1</span>')
+      // Pseudo-classes and pseudo-elements
+      .replace(/(::?[a-zA-Z-]+(?:\([^)]*\))?)/g, '<span style="color:#dcdcaa">$1</span>')
+      // Class selectors
+      .replace(/(\.[a-zA-Z0-9_-]+)/g, '<span style="color:#4fc1ff;font-weight:bold">$1</span>')
+      // ID selectors
+      .replace(/(#[a-zA-Z0-9_-]+)/g, '<span style="color:#4fc1ff;font-weight:bold">$1</span>')
+      // Element selectors (before opening brace)
+      .replace(/\b([a-zA-Z][a-zA-Z0-9-]*)(\s*[,{])/g, '<span style="color:#d7ba7d;font-weight:bold">$1</span>$2')
+      // Attribute selectors
+      .replace(/(\[[^\]]*\])/g, '<span style="color:#4fc1ff">$1</span>')
+      // Properties
+      .replace(/([a-z-]+)(\s*:\s*)/g, '<span style="color:#9cdcfe;font-weight:bold">$1</span>$2')
+      // String values
+      .replace(/(:\s*)("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')/g, '$1<span style="color:#ce9178">$2</span>')
+      // Color values (hex, rgb, rgba, hsl, hsla, named colors)
+      .replace(/\b(#[0-9a-fA-F]{3,8}|rgb\([^)]+\)|rgba\([^)]+\)|hsl\([^)]+\)|hsla\([^)]+\)|transparent|inherit|initial|unset|red|green|blue|white|black|gray|yellow|orange|purple|pink|brown|cyan|magenta)\b/g, '<span style="color:#4fc1ff;font-weight:bold">$1</span>')
+      // Numbers with units
+      .replace(/\b(\d+(?:\.\d+)?(?:px|em|rem|%|vh|vw|vmin|vmax|pt|pc|in|cm|mm|ex|ch|deg|rad|turn|s|ms|Hz|kHz|dpi|dpcm|dppx|fr))\b/g, '<span style="color:#b5cea8;font-weight:bold">$1</span>')
+      // Plain numbers
+      .replace(/\b(\d+(?:\.\d+)?)\b/g, '<span style="color:#b5cea8">$1</span>')
+      // CSS functions
+      .replace(/\b([a-z-]+)(\()/g, '<span style="color:#dcdcaa">$1</span>$2')
+      // Important
+      .replace(/(!important)/g, '<span style="color:#c586c0;font-weight:bold">$1</span>')
+      // CSS keywords
+      .replace(/\b(auto|none|normal|inherit|initial|unset|revert|all|block|inline|inline-block|flex|grid|absolute|relative|fixed|sticky|static|left|right|center|justify|space-between|space-around|space-evenly|start|end|baseline|stretch|wrap|nowrap|column|row|hidden|visible|scroll|clip|ellipsis|break-word|pre|pre-wrap|pre-line|solid|dashed|dotted|double|groove|ridge|inset|outset|border-box|content-box|padding-box|cover|contain|repeat|no-repeat|repeat-x|repeat-y|round|space)\b/g, '<span style="color:#569cd6">$1</span>');
+  }
+
   // Get appropriate file extension based on language
-  window.getFileExtension = function(language) {
+  window.getFileExtension = function (language) {
     if (!language) return 'txt';
-    
+
     const lang = language.toLowerCase();
     const extensions = {
       'javascript': 'js',
@@ -774,12 +1327,12 @@ function copyCode(codeId) {
       'yaml': 'yml',
       'markdown': 'md'
     };
-    
+
     return extensions[lang] || 'txt';
   };
-  
-  // Copy code to clipboard with improved feedback
-  window.copyCode = function(codeId) {
+
+  // Copy function (make sure this is available)
+  window.copyCode = function (codeId) {
     const codeElement = document.getElementById(codeId);
     if (codeElement) {
       const text = codeElement.textContent;
@@ -787,15 +1340,13 @@ function copyCode(codeId) {
         // Show success feedback
         const btn = codeElement.closest('.xcode-window').querySelector('.xcode-copy-btn');
         const originalSvg = btn.innerHTML;
-        
+
         // Change to checkmark icon
         btn.innerHTML = `
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="20 6 9 17 4 12"></polyline>
-          </svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 10.5l3 3 7-7" stroke="#10a37f" stroke-width="2" fill="none"/></svg>
         `;
         btn.style.background = '#28a745';
-        
+
         setTimeout(() => {
           btn.innerHTML = originalSvg;
           btn.style.background = '#3a3a3a';
@@ -803,15 +1354,15 @@ function copyCode(codeId) {
       });
     }
   };
-  
+
   // Download code as a file
-  window.downloadCode = function(codeId, fileName) {
+  window.downloadCode = function (codeId, fileName) {
     const codeElement = document.getElementById(codeId);
     if (codeElement) {
       const text = codeElement.textContent;
-      const blob = new Blob([text], {type: 'text/plain'});
+      const blob = new Blob([text], { type: 'text/plain' });
       const url = URL.createObjectURL(blob);
-      
+
       const a = document.createElement('a');
       a.href = url;
       a.download = fileName;
@@ -819,157 +1370,45 @@ function copyCode(codeId) {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      
+
       // Show feedback
       const btn = codeElement.closest('.xcode-window').querySelector('.xcode-download-btn');
       const originalBackground = btn.style.background;
       btn.style.background = '#28a745';
-      
+
       setTimeout(() => {
         btn.style.background = originalBackground;
       }, 2000);
     }
   };
-  
+
   // Preview HTML in a container below the code with DeepSeek-like animations
-  window.previewHTML = function(codeId) {
-    const codeElement = document.getElementById(codeId);
-    const previewContainer = document.getElementById(`preview-${codeId}`);
+  window.previewHTML = function (codeId) {
+    const rawCodeEl = document.getElementById(`raw-code-${codeId}`);
     
-    if (codeElement && previewContainer) {
-      const htmlContent = codeElement.textContent;
-      const isMobile = window.innerWidth < 768;
-      const overlayEl = document.getElementById('desktop-preview-overlay');
-      const isCurrentlyShown = isMobile ? (previewContainer.style.display !== 'none') : !!overlayEl;
+    if (rawCodeEl) {
+      const htmlContent = rawCodeEl.value;
       
-      if (isCurrentlyShown) {
-        // Hide preview with animation
-        if (window.innerWidth < 768) {
-          // Mobile slide-down animation
-          previewContainer.style.transform = 'translateY(100%)';
-          setTimeout(() => {
-            previewContainer.style.display = 'none';
-            previewContainer.style.transform = 'translateY(0)';
-          }, 300);
-        } else {
-          // Desktop close overlay modal
-          const overlayEl2 = document.getElementById('desktop-preview-overlay');
-          if (overlayEl2) {
-            overlayEl2.style.opacity = '0';
-            const contentEl = overlayEl2.querySelector('.desktop-preview-content');
-            if (contentEl) contentEl.style.transform = 'scale(0.98)';
-            setTimeout(() => {
-              if (overlayEl2 && overlayEl2.parentNode) overlayEl2.parentNode.removeChild(overlayEl2);
-            }, 200);
-          }
-        }
-        
-        const btn = codeElement.closest('.xcode-window').querySelector('.xcode-preview-btn');
-        btn.style.background = '#3a3a3a';
-      } else {
-        // Show preview
-        previewContainer.innerHTML = htmlContent;
-        previewContainer.style.display = 'block';
-        
-        // Highlight the preview button
-        const btn = codeElement.closest('.xcode-window').querySelector('.xcode-preview-btn');
+      // Create a blob URL for the HTML content
+      const blob = new Blob([htmlContent], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      
+      // Open in new tab
+      const newTab = window.open(url, '_blank');
+      
+      // Clean up the blob URL after a short delay
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+      }, 1000);
+      
+      // Optional: Briefly highlight the button to show it was clicked
+      const btn = document.querySelector(`.xcode-preview-btn[onclick*="'${codeId}'"]`);
+      if (btn) {
+        const originalBg = btn.style.background;
         btn.style.background = '#2c7be5';
-        
-        // Check if we're on mobile and adjust display
-        const isMobile = window.innerWidth < 768;
-        if (isMobile) {
-          // Mobile settings with slide-up animation
-          previewContainer.style.position = 'fixed';
-          previewContainer.style.bottom = '0';
-          previewContainer.style.left = '0';
-          previewContainer.style.right = '0';
-          previewContainer.style.maxHeight = '85vh';
-          previewContainer.style.zIndex = '1000';
-          previewContainer.style.boxShadow = '0 -2px 20px rgba(0,0,0,0.3)';
-          previewContainer.style.borderRadius = '12px 12px 0 0';
-          previewContainer.style.overflow = 'hidden';
-          previewContainer.style.transform = 'translateY(100%)';
-          previewContainer.style.transition = 'transform 0.3s ease-in-out';
-          
-          // Add handle bar for mobile
-          const handleBar = document.createElement('div');
-          handleBar.style.width = '40px';
-          handleBar.style.height = '4px';
-          handleBar.style.background = '#ccc';
-          handleBar.style.borderRadius = '2px';
-          handleBar.style.margin = '8px auto';
-          previewContainer.insertBefore(handleBar, previewContainer.firstChild);
-          
-          // Add close button for mobile
-          const closeBtn = document.createElement('div');
-          closeBtn.style.position = 'absolute';
-          closeBtn.style.top = '12px';
-          closeBtn.style.right = '12px';
-          closeBtn.style.zIndex = '1001';
-          closeBtn.innerHTML = `
-            <div style="cursor: pointer; background: #f44336; color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: bold;">
-              ×
-            </div>
-          `;
-          closeBtn.onclick = () => previewHTML(codeId);
-          previewContainer.appendChild(closeBtn);
-          
-          // Trigger slide-up animation
-          setTimeout(() => {
-            previewContainer.style.transform = 'translateY(0)';
-          }, 10);
-        } else {
-          // Desktop: create overlay modal centered
-          const overlay = document.createElement('div');
-          overlay.id = 'desktop-preview-overlay';
-          overlay.style.position = 'fixed';
-          overlay.style.inset = '0';
-          overlay.style.background = 'rgba(0,0,0,0.45)';
-          overlay.style.display = 'flex';
-          overlay.style.alignItems = 'center';
-          overlay.style.justifyContent = 'center';
-          overlay.style.opacity = '0';
-          overlay.style.transition = 'opacity 0.2s ease-in-out';
-          
-          // Content container
-          const content = document.createElement('div');
-          content.className = 'desktop-preview-content';
-          content.style.width = '80vw';
-          content.style.height = '80vh';
-          content.style.background = '#fff';
-          content.style.borderRadius = '12px';
-          content.style.boxShadow = '0 10px 40px rgba(0,0,0,0.3)';
-          content.style.overflow = 'hidden';
-          content.style.transform = 'scale(0.98)';
-          content.style.transition = 'transform 0.2s ease-in-out';
-          content.style.position = 'relative';
-          
-          // Close button
-          const close = document.createElement('div');
-          close.style.position = 'absolute';
-          close.style.top = '12px';
-          close.style.right = '12px';
-          close.style.zIndex = '10';
-          close.innerHTML = `<div style="cursor:pointer;background:#f44336;color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:bold;">×</div>`;
-          close.onclick = () => previewHTML(codeId);
-          content.appendChild(close);
-          
-          // Iframe to render HTML safely
-          const iframe = document.createElement('iframe');
-          iframe.style.border = 'none';
-          iframe.style.width = '100%';
-          iframe.style.height = '100%';
-          iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin');
-          iframe.srcdoc = htmlContent;
-          content.appendChild(iframe);
-          
-          // Append and animate
-          overlay.appendChild(content);
-          document.body.appendChild(overlay);
-          // backdrop click closes
-          overlay.addEventListener('click', (e) => { if (e.target === overlay) previewHTML(codeId); });
-          requestAnimationFrame(() => { overlay.style.opacity = '1'; content.style.transform = 'scale(1)'; });
-        }
+        setTimeout(() => {
+          btn.style.background = originalBg || '#3a3a3a';
+        }, 200);
       }
     }
   };
@@ -1016,7 +1455,7 @@ function copyCode(codeId) {
       <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
       <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/>
     </svg> <span>Edit</span>`;
-    
+
     editBtn.onclick = async () => {
       const conv = getCurrentConversation();
       if (!conv || messageIndex < 0) {
@@ -1027,7 +1466,7 @@ function copyCode(codeId) {
       // Create edit input
       const originalText = text;
       msg.innerHTML = '';
-      
+
       const textarea = document.createElement('textarea');
       textarea.className = 'edit-message-input';
       textarea.value = originalText;
@@ -1047,40 +1486,40 @@ function copyCode(codeId) {
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
         transition: all 0.2s ease;
       `;
-      
+
       textarea.addEventListener('focus', () => {
         textarea.style.boxShadow = '0 4px 16px rgba(16, 163, 127, 0.15)';
       });
       textarea.addEventListener('blur', () => {
         textarea.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.08)';
       });
-      
+
       const btnContainer = document.createElement('div');
       btnContainer.style.cssText = 'display: flex; gap: 8px; margin-top: 8px;';
-      
+
       const saveBtn = document.createElement('button');
       saveBtn.className = 'dialog-btn dialog-btn-primary';
       saveBtn.style.cssText = 'padding: 8px 16px; font-size: 13px;';
       saveBtn.innerHTML = '✓ Save & Regenerate';
-      
+
       const cancelBtn = document.createElement('button');
       cancelBtn.className = 'dialog-btn dialog-btn-cancel';
       cancelBtn.style.cssText = 'padding: 8px 16px; font-size: 13px;';
       cancelBtn.innerHTML = '✕ Cancel';
-      
+
       btnContainer.appendChild(saveBtn);
       btnContainer.appendChild(cancelBtn);
       msg.appendChild(textarea);
       msg.appendChild(btnContainer);
-      
+
       textarea.focus();
       textarea.setSelectionRange(textarea.value.length, textarea.value.length);
-      
+
       // Cancel edit
       cancelBtn.onclick = () => {
         msg.innerHTML = renderBold(originalText);
       };
-      
+
       // Save and regenerate with stop button
       saveBtn.onclick = async () => {
         const newText = textarea.value.trim();
@@ -1088,31 +1527,31 @@ function copyCode(codeId) {
           showBubble("Message cannot be empty");
           return;
         }
-        
+
         saveBtn.disabled = true;
         saveBtn.innerHTML = '⏳ Regenerating...';
-        
+
         // Show stop button
         isGenerating = true;
         shouldStop = false;
         activeGenerationTab = currentConversationId;
         updateStopButtonVisibility();
-        
+
         try {
           // Update the message
           conv.messages[messageIndex].text = newText;
-          
+
           // Remove all messages after this one
           conv.messages.splice(messageIndex + 1);
-          
+
           await saveConversations();
-          
-          // Re-render conversation to show the edited message
+
+          // Re-render to show the edited message
           renderConversationMessages();
-          
+
           // Get the selected model
           const selectedModel = localStorage.getItem('selectedModel') || 'gpt-4o-mini';
-          
+
           // Create bot message container
           const botMsg = document.createElement("div");
           botMsg.className = "chat-message bot-message";
@@ -1146,7 +1585,7 @@ function copyCode(codeId) {
               }
               break;
             }
-            
+
             if (part?.text) {
               if (!hasStartedTyping) {
                 if (typing.parentNode) typing.remove();
@@ -1165,11 +1604,11 @@ function copyCode(codeId) {
 
           // Final render
           botContentDiv.innerHTML = processCodeBlocks(fullResponse);
-          
+
           // Add actions
           const actions = createBotActions(fullResponse, botMessageIndex);
           botMsg.appendChild(actions);
-          
+
           showBubble("✨ Message edited and regenerated!");
         } catch (err) {
           console.error("Edit error:", err);
@@ -1184,7 +1623,7 @@ function copyCode(codeId) {
           updateStopButtonVisibility();
         }
       };
-      
+
       // Enter to save (Shift+Enter for new line)
       textarea.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
@@ -1325,6 +1764,23 @@ function copyCode(codeId) {
   let savedPartialResponse = ""; // To save partial responses when switching tabs
 
   // ===== sendPrompt (STREAMING VERSION with MARKDOWN) =====
+  function constructFinalPrompt(text) {
+    const conv = getCurrentConversation();
+    const history = (conv && conv.messages.length > 0)
+      ? conv.messages.map(m => ({ from: m.fromUser ? 'user' : 'assistant', text: m.text }))
+      : [];
+
+    const promptObject = {
+      prompt: text,
+      internal_metadata: {
+        ...getInternalMetadata(),
+        chat_history: history,
+      }
+    };
+
+    return JSON.stringify(promptObject, null, 2); // Pretty-print JSON
+  }
+
   async function sendPrompt(text) {
     if (!currentConversationId) {
       const newConv = { id: Date.now(), title: 'New Chat', messages: [] };
@@ -1344,7 +1800,7 @@ function copyCode(codeId) {
     appendUserMessage(text, userMessageIndex);
 
     if (input) input.value = "";
-    
+
     // Show stop button only in this tab
     isGenerating = true;
     shouldStop = false;
@@ -1368,12 +1824,13 @@ function copyCode(codeId) {
     // Typing indicator
     const typing = createTypingIndicator();
     contentDiv.appendChild(typing);
-    
+
     let fullResponse = "";
     let hasStartedTyping = false;
 
     try {
-      const response = await puter.ai.chat(text, {
+      const finalPrompt = constructFinalPrompt(text);
+      const response = await puter.ai.chat(finalPrompt, {
         model: (modelSelect ? modelSelect.value : "gpt-5-nano"),
         stream: true
       });
@@ -1387,14 +1844,14 @@ function copyCode(codeId) {
             conv.messages.push({ text: fullResponse, fromUser: false });
             await saveConversations();
             const botMessageIndex = conv.messages.length - 1;
-            
+
             // Add action buttons even when stopped
             const actions = createBotActions(fullResponse, botMessageIndex);
             msg.appendChild(actions);
           }
           break;
         }
-        
+
         if (part?.text) {
           if (!hasStartedTyping) {
             if (typing.parentNode) typing.remove();
@@ -1411,11 +1868,11 @@ function copyCode(codeId) {
         conv.messages.push({ text: fullResponse, fromUser: false });
         await saveConversations();
         const botMessageIndex = conv.messages.length - 1;
-        
+
         // Add action buttons
         const actions = createBotActions(fullResponse, botMessageIndex);
         msg.appendChild(actions);
-        
+
         // Generate chat title in background
         setTimeout(() => generateChatTitle(conv), 1000);
       }
@@ -1426,7 +1883,7 @@ function copyCode(codeId) {
       shouldStop = false;
       savedPartialResponse = "";
       activeGenerationTab = null;
-      
+
       // Update button state
       updateStopButtonVisibility();
     }
@@ -1445,7 +1902,7 @@ function copyCode(codeId) {
   // Helper function to update stop button visibility based on current state
   function updateStopButtonVisibility() {
     if (!sendButton) return;
-    
+
     if (isGenerating && activeGenerationTab === currentConversationId) {
       // Show stop button in the generating tab
       sendButton.style.display = "flex";
@@ -1470,7 +1927,7 @@ function copyCode(codeId) {
       showBubble("⏹️ Stopping generation...");
       return;
     }
-    
+
     // Otherwise send the prompt
     const text = input ? input.value.trim() : "";
     if (!text) return;
@@ -1498,7 +1955,7 @@ function copyCode(codeId) {
 
   if (menuButton) menuButton.addEventListener("click", openMenu);
   if (closeMenuBtn) closeMenuBtn.addEventListener("click", closeMenu);
-  
+
   // Click outside to close menu
   if (menuOverlay) {
     menuOverlay.addEventListener("click", closeMenu);
@@ -1628,7 +2085,7 @@ function copyCode(codeId) {
 
     recognition.onresult = (event) => {
       let interimTranscript = '';
-      
+
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const transcript = event.results[i][0].transcript;
         if (event.results[i].isFinal) {
